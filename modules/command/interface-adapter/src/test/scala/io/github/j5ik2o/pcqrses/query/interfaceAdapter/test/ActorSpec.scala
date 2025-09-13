@@ -3,7 +3,11 @@ package io.github.j5ik2o.pcqrses.query.interfaceAdapter.test
 import com.typesafe.config.{Config, ConfigFactory}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.actor.testkit.typed.TestKitSettings
-import org.apache.pekko.actor.testkit.typed.scaladsl.{ActorTestKit, ActorTestKitBase, ScalaTestWithActorTestKit}
+import org.apache.pekko.actor.testkit.typed.scaladsl.{
+  ActorTestKit,
+  ActorTestKitBase,
+  ScalaTestWithActorTestKit
+}
 import org.apache.pekko.actor.typed.ActorRef
 import org.apache.pekko.actor.typed.scaladsl.adapter.*
 import org.scalatest.concurrent.{PatienceConfiguration, ScalaFutures}
@@ -33,20 +37,18 @@ abstract class ActorSpec(testKit: ActorTestKit)
 
   def this() = this(ActorTestKit(ActorTestKitBase.testNameFromCallStack()))
 
-  def this(config: String) = {
+  def this(config: String) =
     this(
       ActorTestKit(
         ActorTestKitBase.testNameFromCallStack(),
         ConfigFactory.parseString(config)
       )
     )
-  }
 
-  def this(config: Config) = {
+  def this(config: Config) =
     this(ActorTestKit(ActorTestKitBase.testNameFromCallStack(), config))
-  }
 
-  def this(config: Config, settings: TestKitSettings) = {
+  def this(config: Config, settings: TestKitSettings) =
     this(
       ActorTestKit(
         ActorTestKitBase.testNameFromCallStack(),
@@ -54,7 +56,6 @@ abstract class ActorSpec(testKit: ActorTestKit)
         settings
       )
     )
-  }
 
   implicit def classicSystem: ActorSystem = system.toClassic
 

@@ -60,7 +60,7 @@ object UserAccount {
         Right((updated, event))
       }
 
-    override def delete: Either[DeleteError, (UserAccount, UserAccountEvent)] = {
+    override def delete: Either[DeleteError, (UserAccount, UserAccountEvent)] =
       if (deleted) {
         Left(DeleteError.AlreadyDeleted)
       } else {
@@ -72,6 +72,5 @@ object UserAccount {
         )
         Right((updated, event))
       }
-    }
   }
 }

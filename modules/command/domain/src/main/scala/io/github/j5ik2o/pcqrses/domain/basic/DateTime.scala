@@ -30,13 +30,16 @@ object DateTime {
   def from(value: Instant, zoneId: ZoneId = ZoneId.systemDefault()): DateTime =
     apply(LocalDateTime.ofInstant(value, zoneId))
   def from(value: ZonedDateTime): DateTime = apply(value.toLocalDateTime)
-  def fromSecondsAndNanos(seconds: Long, nanos: Int, zoneId: ZoneId = ZoneId.systemDefault()): DateTime =
+  def fromSecondsAndNanos(
+    seconds: Long,
+    nanos: Int,
+    zoneId: ZoneId = ZoneId.systemDefault()): DateTime =
     apply(LocalDateTime.ofInstant(Instant.ofEpochSecond(seconds, nanos.toLong), zoneId))
 
   def parseFromString(value: String): Either[DateTimeError, DateTime] =
-    try {
+    try
       Right(DateTimeImpl(LocalDateTime.parse(value)))
-    } catch {
+    catch {
       case e: DateTimeParseException => Left(DateTimeError.InvalidFormat(e.getMessage))
     }
 

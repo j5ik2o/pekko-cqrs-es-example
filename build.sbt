@@ -95,7 +95,7 @@ lazy val commandDomain = (project in file("modules/command/domain"))
 
 lazy val commandInterfaceAdapterContract =
   (project in file("modules/command/interface-adapter-contract"))
-    .enablePlugins(JacocoPlugin)
+    .enablePlugins(JacocoPlugin, PekkoGrpcPlugin)
     .settings(commonSettings)
     .settings(
       name := "command-interface-adapter-contract",
@@ -475,4 +475,3 @@ addCommandAlias(
   ";queryFlywayMigration/flywayClean;queryFlywayMigration/flywayMigrate")
 
 addCommandAlias("dockerBuildAll", ";commandApi/docker:publishLocal;queryApi/docker:publishLocal")
-
