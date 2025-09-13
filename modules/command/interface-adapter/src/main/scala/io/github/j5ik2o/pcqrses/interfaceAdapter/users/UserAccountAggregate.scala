@@ -55,7 +55,7 @@ object UserAccountAggregate {
           case Right((newUser, event)) =>
             effector.persistEvent(event) { _ =>
               replyTo ! DeleteSucceeded(id)
-              handleDeleted(UserAccountAggregateState.Deleted(newUser.id), effector)
+              handleDeleted(UserAccountAggregateState.Deleted(newUser), effector)
             }
         }
       case Get(id, replyTo) if state.user.id == id =>
@@ -66,10 +66,9 @@ object UserAccountAggregate {
   private def handleDeleted(
     state: UserAccountAggregateState.Deleted,
     effector: PersistenceEffector[UserAccountAggregateState, UserAccountEvent, Command])
-    : Behavior[Command] = Behaviors.receiveMessagePartial {
-    case Get(id, replyTo) =>
-      replyTo ! GetNotFoundFailed(id)
-      Behaviors.same
+    : Behavior[Command] = Behaviors.receiveMessagePartial { case Get(id, replyTo) =>
+    replyTo ! GetNotFoundFailed(id)
+    Behaviors.same
   }
 
   def apply(id: UserAccountId): Behavior[Command] = {
@@ -93,6 +92,8 @@ object UserAccountAggregate {
                 handleNotCreated(initialState, effector)
               case (initialState: UserAccountAggregateState.Created, effector) =>
                 handleCreated(initialState, effector)
+              case (initialState: UserAccountAggregateState.Deleted, effector) =>
+                handleDeleted(initialState, effector)
             })
         .onFailure[IllegalArgumentException](
           SupervisorStrategy.restart

@@ -1,33 +1,23 @@
 syntax = "proto3";
 
-// Brought in from scalapb-runtime
-import "google/protobuf/timestamp.proto";
-import "users/basic.proto";
-
 package io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users;
 
+// Brought in from scalapb-runtime
+import "google/protobuf/timestamp.proto";
+import "basic/basic.proto";
+
+enum UserAccountStatus {
+  UNKNOWN = 0;  // protobufのデフォルト値として予約
+  CREATED = 1;
+  DELETED = 2;
+}
+
 message UserAccountSnapshot {
-  oneof state {
-    UserAccount_NotCreatedSnapshot not_created = 1;
-    UserAccount_CreatedSnapshot created = 2;
-    UserAccount_DeletedSnapshot deleted = 3;
-  }
-}
-
-message UserAccount_NotCreatedSnapshot {
   string user_account_id = 1;
-}
-
-message UserAccount_CreatedSnapshot {
-  string user_account_id = 1;
-  UserAccountName user_name = 2;
-  string email_address = 3;
-  google.protobuf.Timestamp created_at = 4;
-  google.protobuf.Timestamp updated_at = 5;
-}
-
-message UserAccount_DeletedSnapshot {
-  string user_account_id = 1;
-  google.protobuf.Timestamp created_at = 4;
-  google.protobuf.Timestamp updated_at = 5;
+  UserAccountStatus status = 2;
+  // 以下のフィールドはstatusがCREATED以上の時に設定される
+  basic.UserAccountName user_name = 3;
+  string email_address = 4;
+  google.protobuf.Timestamp created_at = 5;
+  google.protobuf.Timestamp updated_at = 6;
 }

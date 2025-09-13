@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users;
+
+import "google/protobuf/timestamp.proto";
+import "basic/basic.proto";
+
+message UserAccountEvent {
+  oneof event {
+    UserAccount_CreatedEvent created = 1;
+    UserAccount_RenamedEvent renamed = 2;
+    UserAccount_DeletedEvent deleted = 3;
+  }
+}
+
+message UserAccount_CreatedEvent {
+  string event_id = 1;
+  string user_account_id = 2;
+  basic.UserAccountName user_name = 3;
+  string email_address = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+}
+
+message UserAccount_RenamedEvent {
+  string event_id = 1;
+  string user_account_id = 2;
+  basic.UserAccountName old_name = 3;
+  basic.UserAccountName new_name = 4;
+  google.protobuf.Timestamp occurred_at = 5;
+}
+
+message UserAccount_DeletedEvent {
+  string event_id = 1;
+  string user_account_id = 2;
+  google.protobuf.Timestamp occurred_at = 3;
+}

@@ -5,14 +5,15 @@ import io.github.j5ik2o.pcqrses.domain.users.{UserAccount, UserAccountEvent, Use
 enum UserAccountAggregateState {
   case NotCreated(id: UserAccountId)
   case Created(user: UserAccount)
-  case Deleted(id: UserAccountId)
+  case Deleted(user: UserAccount) // 削除状態でも全情報を保持
 
   def applyEvent(event: UserAccountEvent): UserAccountAggregateState = (this, event) match {
     case (NotCreated(id), UserAccountEvent.Created(_, entityId, name, emailAddress, _))
         if id == entityId =>
       Created(UserAccount(entityId, name, emailAddress)._1)
 
-    case (Created(user), UserAccountEvent.Renamed(_, entityId, _, newName, _)) if user.id == entityId =>
+    case (Created(user), UserAccountEvent.Renamed(_, entityId, _, newName, _))
+        if user.id == entityId =>
       Created(user.rename(newName) match {
         case Right((u, _)) => u
         case Left(error) =>
@@ -21,7 +22,7 @@ enum UserAccountAggregateState {
 
     case (Created(user), UserAccountEvent.Deleted(_, entityId, _)) if user.id == entityId =>
       Deleted(user.delete match {
-        case Right((u, _)) => u.id
+        case Right((deletedUser, _)) => deletedUser
         case Left(error) =>
           throw new IllegalStateException(s"Failed to delete user: $error")
       })
