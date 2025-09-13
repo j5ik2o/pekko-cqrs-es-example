@@ -194,7 +194,7 @@ deploy_lambda_if_enabled() {
             echo "⏳ Retry deploy in 3s... ($tries/$max_tries)"
             sleep 3
         done
-        
+
         # Lambda関数の状態確認
         echo ""
         echo "⏳ Waiting for Lambda to be fully registered..."
@@ -271,7 +271,7 @@ show_common_access_points() {
 # ========================================
 prepare_docker_environment() {
     local compose_files="$1"
-    
+
     # Dockerイメージのビルド
     echo "🏗️  Building Docker images..."
     sbt dockerBuildAll
@@ -286,7 +286,7 @@ prepare_docker_environment() {
 # ========================================
 post_startup_tasks() {
     local compose_files="$1"
-    
+
     echo ""
     echo "🎉 Services are running!"
 

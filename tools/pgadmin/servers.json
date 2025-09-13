@@ -1,7 +1,7 @@
 {
   "Servers": {
     "1": {
-      "Name": "PCQRSES PostgreSQL",
+      "Name": "Pcqrses PostgreSQL",
       "Group": "Servers",
       "Host": "postgres",
       "Port": 5432,
