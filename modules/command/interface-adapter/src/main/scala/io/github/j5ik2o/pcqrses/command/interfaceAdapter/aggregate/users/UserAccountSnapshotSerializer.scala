@@ -1,10 +1,10 @@
 package io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users
 
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users.{
-  UserAccountSnapshot,
-  NotCreatedSnapshot,
   CreatedSnapshot,
-  DeletedSnapshot
+  DeletedSnapshot,
+  NotCreatedSnapshot,
+  UserAccountSnapshot
 }
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.basic.UserAccountName as ProtoUserAccountName
 
@@ -96,7 +96,7 @@ class UserAccountSnapshotSerializer extends SerializerWithStringManifest {
     snapshot.state match {
       case UserAccountSnapshot.State.NotCreated(notCreated) =>
         NotCreated(DomainUserAccountId.from(notCreated.userAccountId))
-        
+
       case UserAccountSnapshot.State.Created(created) =>
         val (userAccount, _) = DomainUserAccount(
           id = DomainUserAccountId.from(created.userAccountId),
@@ -108,12 +108,11 @@ class UserAccountSnapshotSerializer extends SerializerWithStringManifest {
           createdAt = DateTime.fromSecondsAndNanos(
             created.createdAt.get.seconds,
             created.createdAt.get.nanos),
-          updatedAt = DateTime.fromSecondsAndNanos(
-            created.updatedAt.get.seconds,
-            created.updatedAt.get.nanos)
+          updatedAt =
+            DateTime.fromSecondsAndNanos(created.updatedAt.get.seconds, created.updatedAt.get.nanos)
         )
         Created(userAccount)
-        
+
       case UserAccountSnapshot.State.Deleted(deleted) =>
         val (userAccount, _) = DomainUserAccount(
           id = DomainUserAccountId.from(deleted.userAccountId),
@@ -125,12 +124,11 @@ class UserAccountSnapshotSerializer extends SerializerWithStringManifest {
           createdAt = DateTime.fromSecondsAndNanos(
             deleted.createdAt.get.seconds,
             deleted.createdAt.get.nanos),
-          updatedAt = DateTime.fromSecondsAndNanos(
-            deleted.updatedAt.get.seconds,
-            deleted.updatedAt.get.nanos)
+          updatedAt =
+            DateTime.fromSecondsAndNanos(deleted.updatedAt.get.seconds, deleted.updatedAt.get.nanos)
         )
         Deleted(userAccount)
-        
+
       case UserAccountSnapshot.State.Empty =>
         throw new IllegalArgumentException("Unexpected empty state in UserAccountSnapshot")
     }

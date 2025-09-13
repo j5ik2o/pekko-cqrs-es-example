@@ -15,8 +15,9 @@ import java.util.{Comparator, UUID}
 object UserAccountAggregateSpec {
   val id: String = UUID.randomUUID().toString
 
-  val config: Config = ConfigFactory.parseString(
-    s"""
+  val config: Config = ConfigFactory
+    .parseString(
+      s"""
        |pekko {
        |  persistence {
        |    journal {
@@ -38,13 +39,16 @@ object UserAccountAggregateSpec {
        |  }
        |}
        |""".stripMargin
-  ).withFallback(ConfigFactory.load())
+    )
+    .withFallback(ConfigFactory.load())
 
 }
 
-class UserAccountAggregateSpec extends ActorSpec(UserAccountAggregateSpec.config)
+class UserAccountAggregateSpec
+  extends ActorSpec(UserAccountAggregateSpec.config)
   with UserAccountTestHelper
-  with Matchers with Eventually
+  with Matchers
+  with Eventually
   with BeforeAndAfterAll {
   override def afterAll(): Unit = {
     super.afterAll()
@@ -61,10 +65,10 @@ class UserAccountAggregateSpec extends ActorSpec(UserAccountAggregateSpec.config
    * 直接spawnしたアクターにコマンドを送信
    */
   override def sendCommand[Reply](
-                                   userAccountId: UserAccountId,
-                                   createCommand: UserAccountId => Command,
-                                   probe: TestProbe[Reply]
-                                 ): Unit = {
+    userAccountId: UserAccountId,
+    createCommand: UserAccountId => Command,
+    probe: TestProbe[Reply]
+  ): Unit = {
     val aggregate = spawn(UserAccountAggregate(userAccountId))
     aggregate ! createCommand(userAccountId)
   }
@@ -75,30 +79,30 @@ class UserAccountAggregateSpec extends ActorSpec(UserAccountAggregateSpec.config
         "新しいユーザアカウントを作成できる" in
           testCreateUserAccountOnNotCreated()
       }
-      
+
       "Getコマンドを受信したとき" - {
         "NotFoundを返す" in
           testGetUserAccountOnNotCreated()
       }
     }
-    
+
     "ユーザアカウントが作成済みの状態" - {
       "Getコマンドを受信したとき" - {
         "ユーザアカウント情報を返す" in
           testGetUserAccountOnCreated()
       }
-      
+
       "Renameコマンドを受信したとき" - {
         "ユーザアカウントの名前を変更できる" in
           testRenameUserAccountOnCreated()
       }
-      
+
       "Deleteコマンドを受信したとき" - {
         "ユーザアカウントを削除できる" in
           testDeleteUserAccountOnCreated()
       }
     }
-    
+
     "ユーザアカウントが削除済みの状態" - {
       "Getコマンドを受信したとき" - {
         "NotFoundを返す" in

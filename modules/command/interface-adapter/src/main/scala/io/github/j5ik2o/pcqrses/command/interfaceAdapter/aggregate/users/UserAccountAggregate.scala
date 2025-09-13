@@ -11,7 +11,6 @@ import io.github.j5ik2o.pcqrses.command.domain.users.{UserAccount, UserAccountEv
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.*
 import org.apache.pekko.actor.typed.{Behavior, SupervisorStrategy}
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import org.apache.pekko.persistence.typed.PersistenceId
 
 object UserAccountAggregate {
 

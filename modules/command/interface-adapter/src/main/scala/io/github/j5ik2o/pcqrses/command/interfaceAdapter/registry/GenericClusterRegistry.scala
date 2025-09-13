@@ -82,7 +82,7 @@ object GenericClusterRegistry {
     aggregateBehavior: ID => Behavior[CMD]
   )(implicit system: ActorSystem[?]): Behavior[CMD] = {
     val clusterSharding = ClusterSharding(system)
-    
+
     // クラスターシャーディングの初期化
     init(
       aggregateName = aggregateName,
@@ -95,7 +95,7 @@ object GenericClusterRegistry {
       idleTimeout = idleTimeout.getOrElse(DefaultIdleTimeout),
       enablePassivation = enablePassivation
     )
-    
+
     // プロキシBehaviorを返す
     ofProxy(aggregateName, clusterSharding)
   }
@@ -264,6 +264,5 @@ object GenericClusterRegistry {
     val typeKey = EntityTypeKey[CMD](aggregateName)
     clusterSharding.entityRefFor(typeKey, aggregateId.asString)
   }
-  
 
 }
