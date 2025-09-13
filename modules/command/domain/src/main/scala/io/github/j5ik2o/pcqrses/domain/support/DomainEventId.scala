@@ -2,25 +2,25 @@ package io.github.j5ik2o.pcqrses.domain.support
 
 import wvlet.airframe.ulid.ULID
 
-trait AggregateEventId {
+trait DomainEventId {
   def asString: String
 }
 
-object AggregateEventId {
-  def apply(value: ULID): AggregateEventId = AggregateEventIdImpl(value)
+object DomainEventId {
+  def apply(value: ULID): DomainEventId = AggregateEventIdImpl(value)
 
-  def from(value: String): AggregateEventId = AggregateEventIdImpl(ULID.fromString(value))
+  def from(value: String): DomainEventId = AggregateEventIdImpl(ULID.fromString(value))
 
-  def generate(): AggregateEventId = AggregateEventIdImpl(ULID.newULID)
+  def generate(): DomainEventId = AggregateEventIdImpl(ULID.newULID)
 
-  def parse(value: String): Either[Exception, AggregateEventId] =
+  def parse(value: String): Either[Exception, DomainEventId] =
     try
       Right(from(value))
     catch {
       case e: IllegalArgumentException => Left(e)
     }
 
-  private final case class AggregateEventIdImpl(ulid: ULID) extends AggregateEventId {
+  private final case class AggregateEventIdImpl(ulid: ULID) extends DomainEventId {
     override def asString: String = ulid.toString
   }
 

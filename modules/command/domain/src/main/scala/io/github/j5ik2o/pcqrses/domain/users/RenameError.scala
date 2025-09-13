@@ -1,5 +1,5 @@
 package io.github.j5ik2o.pcqrses.domain.users
 
-class RenameError {
-
+enum RenameError {
+  case FamilyNameSame
 }

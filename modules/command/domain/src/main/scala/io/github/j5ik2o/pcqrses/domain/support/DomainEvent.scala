@@ -1,10 +1,10 @@
 package io.github.j5ik2o.pcqrses.domain.support
 
-import java.time.Instant
+import io.github.j5ik2o.pcqrses.domain.basic.DateTime
 
-trait AggregateEvent {
-  type AggregateIdType <: AggregateId
-  def id: AggregateEventId
-  def aggregateId: AggregateIdType
-  def occurredAt: Instant
+trait DomainEvent {
+  type EntityIdType <: EntityId
+  def id: DomainEventId
+  def entityId: EntityIdType
+  def occurredAt: DateTime
 }

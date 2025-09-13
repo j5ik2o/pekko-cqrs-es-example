@@ -1,5 +1,13 @@
 package io.github.j5ik2o.pcqrses.domain.basic
 
-enum DateTimeError {
+import io.github.j5ik2o.pcqrses.domain.support.DomainError
 
+enum DateTimeError extends DomainError {
+  case InvalidFormat(value: String)
+
+  override def message: String = {
+    this match {
+      case InvalidFormat(value) => s"Invalid date time format: $value"
+    }
+  }
 }

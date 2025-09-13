@@ -1,6 +1,6 @@
 package io.github.j5ik2o.pcqrses.domain.support
 
-trait AggregateRoot {
-  type IdType <: AggregateId
+trait Entity {
+  type IdType <: EntityId
   def id: IdType
 }

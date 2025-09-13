@@ -1,16 +1,13 @@
-package io.github.j5ik2o.pcqrses.domain.staff
+package io.github.j5ik2o.pcqrses.domain.users
 
-/**
- * EmailAddress生成時のバリデーションエラー。
- *
- * メールアドレスの形式エラーを型安全に表現し、 不正なアドレスによるシステムエラーを防止する。
- */
+import io.github.j5ik2o.pcqrses.domain.support.DomainError
+
 enum EmailAddressError extends DomainError {
   case Empty
   case TooLong(actualLength: Int)
   case InvalidFormat
 
-  def message: String = this match {
+  override def message: String = this match {
     case Empty => "Email address cannot be empty"
     case TooLong(actualLength) =>
       s"Email address is too long: $actualLength characters (max ${EmailAddress.MaxLength} characters)"

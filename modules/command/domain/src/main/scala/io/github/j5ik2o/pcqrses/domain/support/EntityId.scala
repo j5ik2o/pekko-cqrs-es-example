@@ -1,6 +1,6 @@
 package io.github.j5ik2o.pcqrses.domain.support
 
-trait AggregateId {
-  def aggregateTypeName: String
+trait EntityId {
+  def entityTypeName: String
   def asString: String
 }
