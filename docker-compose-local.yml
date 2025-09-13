@@ -1,0 +1,24 @@
+# 開発環境用の単一ノード構成
+services:
+  # Command API - 単一ノード（ローカル開発用）
+  command-api-1:
+    image: pcqrses-command-api:0.1.0
+    ports:
+      - "${DOCKER_COMMAND_API_PORT:-50501}:18080"
+    depends_on:
+      dynamodb-setup:
+        condition: service_completed_successfully
+    networks:
+      - pcqrses-network
+    environment:
+      # DynamoDB設定
+      J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT: http://localstack:4566
+      J5IK2O_DYNAMO_DB_SNAPSHOT_DYNAMO_DB_CLIENT_ENDPOINT: http://localstack:4566
+      J5IK2O_DYNAMO_DB_STATE_DYNAMO_DB_CLIENT_ENDPOINT: http://localstack:4566
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      # アプリケーション設定（クラスターなし）
+      PEKKO_CLUSTER_ENABLED: "false"
+      COMMAND_API_SERVER_HOST: 0.0.0.0
+      COMMAND_API_SERVER_PORT: 18080

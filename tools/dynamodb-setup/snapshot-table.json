@@ -1,0 +1,57 @@
+{
+  "TableName": "Snapshot",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "pkey",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "skey",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "persistence-id",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "sequence-nr",
+      "AttributeType": "N"
+    }
+  ],
+  "KeySchema": [
+    {
+      "KeyType": "HASH",
+      "AttributeName": "pkey"
+    },
+    {
+      "KeyType": "RANGE",
+      "AttributeName": "skey"
+    }
+  ],
+  "GlobalSecondaryIndexes": [
+    {
+      "IndexName": "GetSnapshotRowsIndex",
+      "KeySchema": [
+        {
+          "AttributeName": "persistence-id",
+          "KeyType": "HASH"
+        },
+        {
+          "AttributeName": "sequence-nr",
+          "KeyType": "RANGE"
+        }
+      ],
+      "Projection": {
+        "ProjectionType": "ALL"
+      },
+      "ProvisionedThroughput": {
+        "ReadCapacityUnits": 10,
+        "WriteCapacityUnits": 10
+      }
+    }
+  ],
+  "ProvisionedThroughput": {
+    "WriteCapacityUnits": 10,
+    "ReadCapacityUnits": 10
+  }
+}

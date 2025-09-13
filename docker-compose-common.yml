@@ -1,0 +1,181 @@
+# ========================================
+# 共通のサービス定義とネットワーク設定
+# ========================================
+#
+# このファイルは全ての環境で共通となるサービス定義です。
+#
+# 使い方:
+#   - 開発環境: docker compose -f docker-compose-common.yml -f docker-compose-local.yml up -d
+#   - クラスター: docker compose -f docker-compose-common.yml -f docker-compose-cluster.yml up -d
+#
+# または以下のスクリプトを使用:
+#   - ./scripts/run-single.sh   # 単一ノード構成（Docker）
+#   - ./scripts/run-cluster.sh  # クラスター環境（3ノード）
+#
+services:
+  # LocalStack (DynamoDB, Lambda等のAWSサービスのエミュレータ)
+  localstack:
+    image: localstack/localstack:4.7
+    hostname: localstack
+    ports:
+      - "${DOCKER_LOCALSTACK_PORT:-50503}:4566"
+    environment:
+      - SERVICES=lambda,dynamodb
+      - DEBUG=1
+      - LAMBDA_EXECUTOR=docker
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - AWS_DEFAULT_REGION=ap-northeast-1
+      - AWS_ACCESS_KEY_ID=dummy
+      - AWS_SECRET_ACCESS_KEY=dummy
+      - LAMBDA_DOCKER_NETWORK=pcqrses_back_pcqrses-network
+      - AWS_ENDPOINT_URL=http://localstack:4566
+      - LOCALSTACK_HOST=localstack
+      - HOSTNAME_FROM_LAMBDA=localstack
+      - LAMBDA_DOCKER_DNS=127.0.0.11
+      - LAMBDA_RUNTIME_ENVIRONMENT_TIMEOUT=60
+      - LAMBDA_REMOVE_CONTAINERS=true
+      - LAMBDA_LIMITS_CODE_SIZE_ZIPPED=524288000
+      - LAMBDA_LIMITS_CODE_SIZE_UNZIPPED=2147483648
+      - LAMBDA_LIMITS_CREATE_FUNCTION_REQUEST_SIZE=314572800
+      - LAMBDA_DOCKER_FLAGS=--platform=${DOCKER_DEFAULT_PLATFORM:-linux/amd64}
+      - LAMBDA_IGNORE_ARCHITECTURE=1
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - pcqrses-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import socket,sys; s=socket.socket(); s.settimeout(2); s.connect(('localhost',4566)); sys.exit(0)\""]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 5s
+
+  # DynamoDBテーブルセットアップ
+  dynamodb-setup:
+    build:
+      context: ./tools/dynamodb-setup
+    networks:
+      - pcqrses-network
+    environment:
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+      AWS_DEFAULT_REGION: ap-northeast-1
+      DYNAMODB_ENDPOINT: http://localstack:4566
+    command: ["-e", "dev"]
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  # DynamoDB管理UI
+  dynamodb-admin:
+    image: aaronshaf/dynamodb-admin
+    ports:
+      - "${DOCKER_DYNAMODB_ADMIN_PORT:-50505}:8001"
+    networks:
+      - pcqrses-network
+    environment:
+      DYNAMO_ENDPOINT: http://localstack:4566
+      AWS_REGION: ap-northeast-1
+      AWS_ACCESS_KEY_ID: dummy
+      AWS_SECRET_ACCESS_KEY: dummy
+    depends_on:
+      localstack:
+        condition: service_healthy
+
+  # PostgreSQL (Read側データベース)
+  postgres:
+    image: postgres:16.4
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pcqrses_development
+      # Simplify local dev: allow trust auth (no password prompt)
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "${DOCKER_POSTGRES_PORT:-50504}:5432"
+    restart: unless-stopped
+    networks:
+      pcqrses-network:
+        aliases:
+          - pcqrses_postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # pgAdmin (PostgreSQL管理UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_SERVER_JSON_FILE: /pgadmin4/servers.json
+    ports:
+      - "${DOCKER_PGADMIN_PORT:-50506}:80"
+    volumes:
+      - ./tools/pgadmin/servers.json:/pgadmin4/servers.json:ro
+      - ./tools/pgadmin/pgpass:/tmp/pgpassfile:ro
+    depends_on:
+      - postgres
+    networks:
+      - pcqrses-network
+    restart: unless-stopped
+    entrypoint:
+      - "/bin/sh"
+      - "-c"
+      - |
+        set -e
+        EMAIL_DIR=$(echo "$${PGADMIN_DEFAULT_EMAIL:-admin@example.com}" | tr '@' '_')
+        mkdir -p "/var/lib/pgadmin/storage/$${EMAIL_DIR}"
+        cp /tmp/pgpassfile "/var/lib/pgadmin/storage/$${EMAIL_DIR}/pgpassfile"
+        chmod 600 "/var/lib/pgadmin/storage/$${EMAIL_DIR}/pgpassfile"
+        exec /entrypoint.sh
+
+  # Flyway (データベースマイグレーション)
+  flyway:
+    image: flyway/flyway:10
+    command: migrate
+    environment:
+      - FLYWAY_URL=jdbc:postgresql://postgres:5432/pcqrses_development
+      - FLYWAY_USER=postgres
+      - FLYWAY_PASSWORD=postgres
+      - FLYWAY_CONNECT_RETRIES=60
+      - FLYWAY_BASELINE_ON_MIGRATE=true
+      - FLYWAY_LOCATIONS=filesystem:/flyway/sql,filesystem:/flyway/seed
+    volumes:
+      - ./modules/query/flyway-migration/src/main/resources/db/migration:/flyway/sql
+      - ./tools/flyway/seed:/flyway/seed:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - pcqrses-network
+
+  # Query API (Read側API) - 単一ノード
+  query-api:
+    image: pcqrses-query-api:0.1.0
+    ports:
+      - "${DOCKER_QUERY_API_PORT:-50502}:18082"
+    depends_on:
+      flyway:
+        condition: service_completed_successfully
+    networks:
+      - pcqrses-network
+    environment:
+      # サーバー設定
+      QUERY_API_SERVER_HOST: 0.0.0.0
+      QUERY_API_SERVER_PORT: 18082
+      # データベース設定
+      DATABASE_URL: jdbc:postgresql://postgres:5432/pcqrses_development
+      DATABASE_USER: postgres
+      DATABASE_PASSWORD: postgres
+      # GraphQL設定
+      GRAPHIQL_ENABLED: "true"  # 開発環境でGraphiQLを有効化
+
+networks:
+  pcqrses-network:
+    driver: bridge

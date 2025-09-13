@@ -1,0 +1,30 @@
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+# すべてのファイルに適用
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# Scalaファイル
+[*.{scala,sbt}]
+indent_style = space
+indent_size = 2
+
+# Markdownファイル（末尾の空白が意味を持つことがある）
+[*.md]
+trim_trailing_whitespace = false
+
+# YAMLファイル
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# JSONファイル
+[*.json]
+indent_style = space
+indent_size = 2

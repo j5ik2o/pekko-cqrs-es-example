@@ -1,0 +1,27 @@
+{
+  "TableName": "State",
+  "AttributeDefinitions": [
+    {
+      "AttributeName": "pkey",
+      "AttributeType": "S"
+    },
+    {
+      "AttributeName": "skey",
+      "AttributeType": "S"
+    }
+  ],
+  "KeySchema": [
+    {
+      "KeyType": "HASH",
+      "AttributeName": "pkey"
+    },
+    {
+      "KeyType": "RANGE",
+      "AttributeName": "skey"
+    }
+  ],
+  "ProvisionedThroughput": {
+    "WriteCapacityUnits": 10,
+    "ReadCapacityUnits": 10
+  }
+}
