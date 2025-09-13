@@ -9,6 +9,7 @@ trait UserAccountName {
 object UserAccountName {
   def apply(firstName: FirstName, lastName: LastName): UserAccountName =
     UserAccountNameImpl(firstName, lastName)
+
   def unapply(self: UserAccountName): Option[(FirstName, LastName)] =
     Some((self.breachEncapsulationOfFirstName, self.breachEncapsulationOfLastName))
 

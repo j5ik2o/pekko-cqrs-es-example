@@ -1,6 +1,6 @@
-package com.precena.macaron.command.interfaceAdapter.registry
+package io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry
 
-import com.precena.macaron.domain.support.AggregateId
+import io.github.j5ik2o.pcqrses.command.domain.support.EntityId
 import org.apache.pekko.actor.typed.{ActorRef, ActorSystem, Behavior}
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.cluster.sharding.typed.ShardingEnvelope
@@ -65,7 +65,7 @@ object GenericClusterSharding {
    * @return
    *   シャーディングエンベロープのActorRef
    */
-  def init[ID <: AggregateId, CMD <: { def id: ID } : ClassTag](
+  def init[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
     aggregateName: String,
     clusterSharding: ClusterSharding,
     aggregateBehavior: ID => Behavior[CMD],
@@ -165,7 +165,7 @@ object GenericClusterSharding {
    * @return
    *   プロキシBehavior
    */
-  def ofProxy[ID <: AggregateId, CMD <: { def id: ID } : ClassTag](
+  def ofProxy[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
     aggregateName: String,
     clusterSharding: ClusterSharding
   ): Behavior[CMD] =
@@ -197,7 +197,7 @@ object GenericClusterSharding {
    * @return
    *   集約への参照
    */
-  def entityRefFor[ID <: AggregateId, CMD <: { def id: ID } : ClassTag](
+  def entityRefFor[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
     aggregateName: String,
     clusterSharding: ClusterSharding,
     aggregateId: ID
@@ -207,32 +207,4 @@ object GenericClusterSharding {
   }
 }
 
-/**
- * 汎用メッセージエクストラクター メッセージから集約IDとシャードIDを抽出
- *
- * @param numberOfShards
- *   シャード数
- * @tparam ID
- *   集約IDの型
- * @tparam CMD
- *   コマンドの型
- */
-private class GenericShardingMessageExtractor[ID <: AggregateId, CMD <: { def id: ID }](
-  numberOfShards: Int
-) extends org.apache.pekko.cluster.sharding.typed.ShardingMessageExtractor[
-    ShardingEnvelope[CMD],
-    CMD
-  ] {
 
-  override def entityId(envelope: ShardingEnvelope[CMD]): String =
-    envelope.entityId
-
-  override def shardId(entityId: String): String = {
-    // エンティティIDのハッシュ値を使用してシャードIDを決定
-    val shardNumber = math.abs(entityId.hashCode) % numberOfShards
-    shardNumber.toString
-  }
-
-  override def unwrapMessage(envelope: ShardingEnvelope[CMD]): CMD =
-    envelope.message
-}

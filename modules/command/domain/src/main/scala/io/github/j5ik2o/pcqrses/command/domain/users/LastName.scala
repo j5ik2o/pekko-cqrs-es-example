@@ -10,11 +10,13 @@ object LastName {
     case Left(e) => throw new IllegalArgumentException(e.message)
   }
 
+  def unapply(self: LastName): Option[String] = Some(self.asString)
+
   def parseFromString(value: String): Either[LastNameError, LastName] =
     if (value.length > 256) Left(LastNameError.TooLong)
     else Right(LastNameImpl(value))
 
-  private case class LastNameImpl(value: String) extends LastName {
+  private final case class LastNameImpl(value: String) extends LastName {
     override def asString: String = value
   }
 }

@@ -15,11 +15,7 @@ import io.github.j5ik2o.pcqrses.command.domain.users.{
   UserAccountId as DomainUserAccountId,
   UserAccountName as DomainUserAccountName
 }
-import UserAccountAggregateState.{
-  Created,
-  Deleted,
-  NotCreated
-}
+import UserAccountAggregateState.{Created, Deleted, NotCreated}
 import org.apache.pekko.serialization.SerializerWithStringManifest
 
 class UserAccountSnapshotSerializer extends SerializerWithStringManifest {

@@ -32,6 +32,7 @@ object UserAccount {
         emailAddress = emailAddress,
         occurredAt = DateTime.now()
       ))
+
   def unapply(
     self: UserAccount): Option[(UserAccountId, UserAccountName, EmailAddress, DateTime, DateTime)] =
     Some((self.id, self.name, self.emailAddress, self.createdAt, self.updatedAt))

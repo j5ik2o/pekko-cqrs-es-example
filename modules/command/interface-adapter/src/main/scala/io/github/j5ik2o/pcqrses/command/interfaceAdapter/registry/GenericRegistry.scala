@@ -1,8 +1,9 @@
-package com.precena.macaron.command.interfaceAdapter.registry
+package io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry
 
-import com.precena.macaron.domain.support.AggregateId
+import io.github.j5ik2o.pcqrses.command.domain.support.EntityId
 import org.apache.pekko.actor.typed.{ActorSystem, Behavior}
 import org.apache.pekko.cluster.sharding.typed.scaladsl.ClusterSharding
+
 import scala.reflect.ClassTag
 import scala.util.Try
 import scala.concurrent.duration.FiniteDuration
@@ -46,7 +47,7 @@ object GenericRegistry {
    * @return
    *   レジストリのBehavior
    */
-  def create[ID <: AggregateId, CMD <: { def id: ID } : ClassTag](
+  def create[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
     aggregateName: String,
     mode: Mode = Mode.LocalMode,
     idleTimeout: Option[FiniteDuration] = None,

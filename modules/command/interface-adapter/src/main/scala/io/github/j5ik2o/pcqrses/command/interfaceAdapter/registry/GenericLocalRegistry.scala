@@ -1,8 +1,9 @@
-package com.precena.macaron.command.interfaceAdapter.registry
+package io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry
 
-import com.precena.macaron.domain.support.AggregateId
+import io.github.j5ik2o.pcqrses.command.domain.support.EntityId
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.actor.typed.{ActorRef, Behavior}
+
 import scala.reflect.Selectable.reflectiveSelectable
 
 /**
@@ -28,7 +29,7 @@ object GenericLocalRegistry {
    * @return
    *   レジストリのBehavior
    */
-  def create[ID <: AggregateId, CMD <: { def id: ID }](
+  def create[ID <: EntityId, CMD <: { def id: ID }](
     name: String
   )(
     nameF: ID => String
