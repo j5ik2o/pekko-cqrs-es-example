@@ -2,7 +2,6 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry
 
 import io.github.j5ik2o.pcqrses.command.domain.support.EntityId
 import org.apache.pekko.actor.typed.{ActorSystem, Behavior}
-import org.apache.pekko.cluster.sharding.typed.scaladsl.ClusterSharding
 
 import scala.reflect.ClassTag
 import scala.util.Try
@@ -65,23 +64,14 @@ object GenericRegistry {
         GenericLocalRegistry.create[ID, CMD](s"$aggregateName-registry")(nameF)(aggregateBehavior)
 
       case Mode.ClusterMode =>
-        // クラスターモード：GenericClusterShardingを使用
-        val clusterSharding = ClusterSharding(system)
-
-        // クラスターシャーディングの初期化（アプリケーション起動時に一度だけ実行）
-        GenericClusterSharding.init(
-          aggregateName = aggregateName,
-          clusterSharding = clusterSharding,
-          aggregateBehavior = aggregateBehavior,
+        // クラスターモード：GenericClusterRegistryを使用
+        GenericClusterRegistry.create[ID, CMD](aggregateName)(
           extractId = extractId,
           createIdleMessage = createIdleMessage,
           stopMessageId = stopMessageId,
-          idleTimeout = idleTimeout.getOrElse(GenericClusterSharding.DefaultIdleTimeout),
+          idleTimeout = idleTimeout,
           enablePassivation = enablePassivation
-        )
-
-        // プロキシBehaviorを返す
-        GenericClusterSharding.ofProxy(aggregateName, clusterSharding)
+        )(aggregateBehavior)
     }
 
   /**

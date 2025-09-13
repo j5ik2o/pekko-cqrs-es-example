@@ -42,6 +42,65 @@ object GenericClusterRegistry {
   final val DefaultNumberOfShards: Int = 100
 
   /**
+   * クラスターレジストリを作成（GenericLocalRegistryと同じインターフェース）
+   *
+   * @param aggregateName
+   *   集約名
+   * @param extractId
+   *   文字列から集約IDを抽出する関数
+   * @param createIdleMessage
+   *   アイドルメッセージを生成する関数
+   * @param stopMessageId
+   *   停止メッセージ用のID
+   * @param numberOfShards
+   *   シャード数
+   * @param idleTimeout
+   *   アイドルタイムアウト
+   * @param enablePassivation
+   *   パッシベーションを有効にするか
+   * @param aggregateBehavior
+   *   集約の振る舞い
+   * @param system
+   *   ActorSystem
+   * @tparam ID
+   *   集約IDの型
+   * @tparam CMD
+   *   コマンドの型
+   * @return
+   *   プロキシBehavior
+   */
+  def create[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
+    aggregateName: String
+  )(
+    extractId: String => Try[ID],
+    createIdleMessage: ID => CMD,
+    stopMessageId: Option[ID] = None,
+    numberOfShards: Int = DefaultNumberOfShards,
+    idleTimeout: Option[FiniteDuration] = None,
+    enablePassivation: Boolean = true
+  )(
+    aggregateBehavior: ID => Behavior[CMD]
+  )(implicit system: ActorSystem[?]): Behavior[CMD] = {
+    val clusterSharding = ClusterSharding(system)
+    
+    // クラスターシャーディングの初期化
+    init(
+      aggregateName = aggregateName,
+      clusterSharding = clusterSharding,
+      aggregateBehavior = aggregateBehavior,
+      extractId = extractId,
+      createIdleMessage = createIdleMessage,
+      stopMessageId = stopMessageId,
+      numberOfShards = numberOfShards,
+      idleTimeout = idleTimeout.getOrElse(DefaultIdleTimeout),
+      enablePassivation = enablePassivation
+    )
+    
+    // プロキシBehaviorを返す
+    ofProxy(aggregateName, clusterSharding)
+  }
+
+  /**
    * クラスターシャーディングを初期化
    *
    * @param aggregateName
@@ -65,7 +124,7 @@ object GenericClusterRegistry {
    * @return
    *   シャーディングエンベロープのActorRef
    */
-  def init[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
+  private def init[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
     aggregateName: String,
     clusterSharding: ClusterSharding,
     aggregateBehavior: ID => Behavior[CMD],
@@ -165,7 +224,7 @@ object GenericClusterRegistry {
    * @return
    *   プロキシBehavior
    */
-  def ofProxy[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
+  private def ofProxy[ID <: EntityId, CMD <: { def id: ID } : ClassTag](
     aggregateName: String,
     clusterSharding: ClusterSharding
   ): Behavior[CMD] =
@@ -205,4 +264,6 @@ object GenericClusterRegistry {
     val typeKey = EntityTypeKey[CMD](aggregateName)
     clusterSharding.entityRefFor(typeKey, aggregateId.asString)
   }
+  
+
 }
