@@ -6,18 +6,30 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users;
 import "google/protobuf/timestamp.proto";
 import "basic/basic.proto";
 
-enum UserAccountStatus {
-  UNKNOWN = 0;  // protobufのデフォルト値として予約
-  CREATED = 1;
-  DELETED = 2;
+message NotCreatedSnapshot {
+  string user_account_id = 1;
+}
+
+message CreatedSnapshot {
+  string user_account_id = 1;
+  basic.UserAccountName user_name = 2;
+  string email_address = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
+}
+
+message DeletedSnapshot {
+  string user_account_id = 1;
+  basic.UserAccountName user_name = 2;
+  string email_address = 3;
+  google.protobuf.Timestamp created_at = 4;
+  google.protobuf.Timestamp updated_at = 5;
 }
 
 message UserAccountSnapshot {
-  string user_account_id = 1;
-  UserAccountStatus status = 2;
-  // 以下のフィールドはstatusがCREATED以上の時に設定される
-  basic.UserAccountName user_name = 3;
-  string email_address = 4;
-  google.protobuf.Timestamp created_at = 5;
-  google.protobuf.Timestamp updated_at = 6;
+  oneof state {
+    NotCreatedSnapshot not_created = 1;
+    CreatedSnapshot created = 2;
+    DeletedSnapshot deleted = 3;
+  }
 }

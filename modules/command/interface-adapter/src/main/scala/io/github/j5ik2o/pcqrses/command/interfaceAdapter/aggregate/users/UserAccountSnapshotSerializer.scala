@@ -2,7 +2,9 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users
 
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users.{
   UserAccountSnapshot,
-  UserAccountStatus
+  NotCreatedSnapshot,
+  CreatedSnapshot,
+  DeletedSnapshot
 }
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.basic.UserAccountName as ProtoUserAccountName
 
@@ -24,97 +26,113 @@ class UserAccountSnapshotSerializer extends SerializerWithStringManifest {
 
   override def manifest(o: AnyRef): String =
     o match {
+      case _: NotCreated => "NotCreated"
       case _: Created => "Created"
       case _: Deleted => "Deleted"
-      case _: NotCreated =>
-        throw new IllegalArgumentException("NotCreated state should not be serialized")
     }
 
   override def toBinary(o: AnyRef): Array[Byte] = {
     val snapshot = o match {
+      case NotCreated(id) =>
+        UserAccountSnapshot(
+          UserAccountSnapshot.State.NotCreated(
+            NotCreatedSnapshot(
+              userAccountId = id.asString
+            )
+          )
+        )
       case Created(userAccount) =>
         UserAccountSnapshot(
-          userAccountId = userAccount.id.asString,
-          status = UserAccountStatus.CREATED,
-          userName = Some(
-            ProtoUserAccountName(
-              userAccount.name.breachEncapsulationOfFirstName.asString,
-              userAccount.name.breachEncapsulationOfLastName.asString
-            )),
-          emailAddress = userAccount.emailAddress.asString,
-          createdAt = {
-            val sn = userAccount.createdAt.toSecondsAndNanos
-            Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
-          },
-          updatedAt = {
-            val sn = userAccount.updatedAt.toSecondsAndNanos
-            Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
-          }
+          UserAccountSnapshot.State.Created(
+            CreatedSnapshot(
+              userAccountId = userAccount.id.asString,
+              userName = Some(
+                ProtoUserAccountName(
+                  userAccount.name.breachEncapsulationOfFirstName.asString,
+                  userAccount.name.breachEncapsulationOfLastName.asString
+                )
+              ),
+              emailAddress = userAccount.emailAddress.asString,
+              createdAt = {
+                val sn = userAccount.createdAt.toSecondsAndNanos
+                Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
+              },
+              updatedAt = {
+                val sn = userAccount.updatedAt.toSecondsAndNanos
+                Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
+              }
+            )
+          )
         )
       case Deleted(userAccount) =>
-        // Deleted状態でも全情報を保持（リカバリ用）
         UserAccountSnapshot(
-          userAccountId = userAccount.id.asString,
-          status = UserAccountStatus.DELETED,
-          userName = Some(
-            ProtoUserAccountName(
-              userAccount.name.breachEncapsulationOfFirstName.asString,
-              userAccount.name.breachEncapsulationOfLastName.asString
-            )),
-          emailAddress = userAccount.emailAddress.asString,
-          createdAt = {
-            val sn = userAccount.createdAt.toSecondsAndNanos
-            Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
-          },
-          updatedAt = {
-            val sn = userAccount.updatedAt.toSecondsAndNanos
-            Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
-          }
+          UserAccountSnapshot.State.Deleted(
+            DeletedSnapshot(
+              userAccountId = userAccount.id.asString,
+              userName = Some(
+                ProtoUserAccountName(
+                  userAccount.name.breachEncapsulationOfFirstName.asString,
+                  userAccount.name.breachEncapsulationOfLastName.asString
+                )
+              ),
+              emailAddress = userAccount.emailAddress.asString,
+              createdAt = {
+                val sn = userAccount.createdAt.toSecondsAndNanos
+                Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
+              },
+              updatedAt = {
+                val sn = userAccount.updatedAt.toSecondsAndNanos
+                Some(com.google.protobuf.timestamp.Timestamp(sn._1, sn._2))
+              }
+            )
+          )
         )
-      case NotCreated(_) =>
-        throw new IllegalArgumentException("NotCreated state should not be serialized")
     }
     snapshot.toByteArray
   }
 
   override def fromBinary(bytes: Array[Byte], manifest: String): AnyRef = {
     val snapshot = UserAccountSnapshot.parseFrom(bytes)
-    snapshot.status match {
-      case UserAccountStatus.CREATED =>
+    snapshot.state match {
+      case UserAccountSnapshot.State.NotCreated(notCreated) =>
+        NotCreated(DomainUserAccountId.from(notCreated.userAccountId))
+        
+      case UserAccountSnapshot.State.Created(created) =>
         val (userAccount, _) = DomainUserAccount(
-          id = DomainUserAccountId.from(snapshot.userAccountId),
+          id = DomainUserAccountId.from(created.userAccountId),
           name = DomainUserAccountName(
-            FirstName(snapshot.userName.get.firstName),
-            LastName(snapshot.userName.get.lastName)
+            FirstName(created.userName.get.firstName),
+            LastName(created.userName.get.lastName)
           ),
-          emailAddress = DomainEmailAddress(snapshot.emailAddress),
+          emailAddress = DomainEmailAddress(created.emailAddress),
           createdAt = DateTime.fromSecondsAndNanos(
-            snapshot.createdAt.get.seconds,
-            snapshot.createdAt.get.nanos),
+            created.createdAt.get.seconds,
+            created.createdAt.get.nanos),
           updatedAt = DateTime.fromSecondsAndNanos(
-            snapshot.updatedAt.get.seconds,
-            snapshot.updatedAt.get.nanos)
+            created.updatedAt.get.seconds,
+            created.updatedAt.get.nanos)
         )
         Created(userAccount)
-      case UserAccountStatus.DELETED =>
-        // Deleted状態でも全情報から復元
+        
+      case UserAccountSnapshot.State.Deleted(deleted) =>
         val (userAccount, _) = DomainUserAccount(
-          id = DomainUserAccountId.from(snapshot.userAccountId),
+          id = DomainUserAccountId.from(deleted.userAccountId),
           name = DomainUserAccountName(
-            FirstName(snapshot.userName.get.firstName),
-            LastName(snapshot.userName.get.lastName)
+            FirstName(deleted.userName.get.firstName),
+            LastName(deleted.userName.get.lastName)
           ),
-          emailAddress = DomainEmailAddress(snapshot.emailAddress),
+          emailAddress = DomainEmailAddress(deleted.emailAddress),
           createdAt = DateTime.fromSecondsAndNanos(
-            snapshot.createdAt.get.seconds,
-            snapshot.createdAt.get.nanos),
+            deleted.createdAt.get.seconds,
+            deleted.createdAt.get.nanos),
           updatedAt = DateTime.fromSecondsAndNanos(
-            snapshot.updatedAt.get.seconds,
-            snapshot.updatedAt.get.nanos)
+            deleted.updatedAt.get.seconds,
+            deleted.updatedAt.get.nanos)
         )
         Deleted(userAccount)
-      case UserAccountStatus.UNKNOWN | UserAccountStatus.Unrecognized(_) =>
-        throw new IllegalArgumentException(s"Unexpected status: ${snapshot.status}")
+        
+      case UserAccountSnapshot.State.Empty =>
+        throw new IllegalArgumentException("Unexpected empty state in UserAccountSnapshot")
     }
   }
 }
