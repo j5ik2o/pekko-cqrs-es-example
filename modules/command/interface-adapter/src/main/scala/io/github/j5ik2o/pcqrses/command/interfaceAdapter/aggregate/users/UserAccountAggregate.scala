@@ -74,7 +74,7 @@ object UserAccountAggregate {
   def apply(id: UserAccountId): Behavior[Command] = {
     val config = PersistenceEffectorConfig
       .create[UserAccountAggregateState, UserAccountEvent, Command](
-        persistenceId = PersistenceId.of(id.entityTypeName, id.asString).id,
+        persistenceId = s"${id.entityTypeName}-${id.asString}",
         initialState = UserAccountAggregateState.NotCreated(id),
         applyEvent = (state, event) => state.applyEvent(event)
       )
