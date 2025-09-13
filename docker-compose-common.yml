@@ -27,7 +27,7 @@ services:
       - AWS_DEFAULT_REGION=ap-northeast-1
       - AWS_ACCESS_KEY_ID=dummy
       - AWS_SECRET_ACCESS_KEY=dummy
-      - LAMBDA_DOCKER_NETWORK=pcqrses_back_pcqrses-network
+      - LAMBDA_DOCKER_NETWORK=p-cqrs-es_back_p-cqrs-es-network
       - AWS_ENDPOINT_URL=http://localstack:4566
       - LOCALSTACK_HOST=localstack
       - HOSTNAME_FROM_LAMBDA=localstack
@@ -42,7 +42,7 @@ services:
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     networks:
-      - pcqrses-network
+      - p-cqrs-es-network
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "python -c \"import socket,sys; s=socket.socket(); s.settimeout(2); s.connect(('localhost',4566)); sys.exit(0)\""]
@@ -56,7 +56,7 @@ services:
     build:
       context: ./tools/dynamodb-setup
     networks:
-      - pcqrses-network
+      - p-cqrs-es-network
     environment:
       AWS_ACCESS_KEY_ID: dummy
       AWS_SECRET_ACCESS_KEY: dummy
@@ -73,7 +73,7 @@ services:
     ports:
       - "${DOCKER_DYNAMODB_ADMIN_PORT:-50505}:8001"
     networks:
-      - pcqrses-network
+      - p-cqrs-es-network
     environment:
       DYNAMO_ENDPOINT: http://localstack:4566
       AWS_REGION: ap-northeast-1
@@ -89,16 +89,16 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: pcqrses_development
+      POSTGRES_DB: p-cqrs-es_development
       # Simplify local dev: allow trust auth (no password prompt)
       POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "${DOCKER_POSTGRES_PORT:-50504}:5432"
     restart: unless-stopped
     networks:
-      pcqrses-network:
+      p-cqrs-es-network:
         aliases:
-          - pcqrses_postgres
+          - p-cqrs-es_postgres
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -122,7 +122,7 @@ services:
     depends_on:
       - postgres
     networks:
-      - pcqrses-network
+      - p-cqrs-es-network
     restart: unless-stopped
     entrypoint:
       - "/bin/sh"
@@ -140,7 +140,7 @@ services:
     image: flyway/flyway:10
     command: migrate
     environment:
-      - FLYWAY_URL=jdbc:postgresql://postgres:5432/pcqrses_development
+      - FLYWAY_URL=jdbc:postgresql://postgres:5432/p-cqrs-es_development
       - FLYWAY_USER=postgres
       - FLYWAY_PASSWORD=postgres
       - FLYWAY_CONNECT_RETRIES=60
@@ -153,29 +153,29 @@ services:
       postgres:
         condition: service_healthy
     networks:
-      - pcqrses-network
+      - p-cqrs-es-network
 
   # Query API (Read側API) - 単一ノード
   query-api:
-    image: pcqrses-query-api:0.1.0
+    image: p-cqrs-es-query-api:0.1.0
     ports:
       - "${DOCKER_QUERY_API_PORT:-50502}:18082"
     depends_on:
       flyway:
         condition: service_completed_successfully
     networks:
-      - pcqrses-network
+      - p-cqrs-es-network
     environment:
       # サーバー設定
       QUERY_API_SERVER_HOST: 0.0.0.0
       QUERY_API_SERVER_PORT: 18082
       # データベース設定
-      DATABASE_URL: jdbc:postgresql://postgres:5432/pcqrses_development
+      DATABASE_URL: jdbc:postgresql://postgres:5432/p-cqrs-es_development
       DATABASE_USER: postgres
       DATABASE_PASSWORD: postgres
       # GraphQL設定
       GRAPHIQL_ENABLED: "true"  # 開発環境でGraphiQLを有効化
 
 networks:
-  pcqrses-network:
+  p-cqrs-es-network:
     driver: bridge

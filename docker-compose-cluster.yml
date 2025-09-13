@@ -20,9 +20,9 @@ x-cluster-env: &cluster-env
   COMMAND_API_HEALTH_CHECK_GRACE_PERIOD: "10s"
 
 x-command-api-base: &command-api-base
-  image: pcqrses-command-api:0.1.0
+  image: p-cqrs-es-command-api:0.1.0
   networks:
-    - pcqrses-network
+    - p-cqrs-es-network
   environment:
     <<: [*dynamodb-env, *cluster-env]
   depends_on:
