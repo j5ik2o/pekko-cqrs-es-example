@@ -206,5 +206,3 @@ object GenericClusterSharding {
     clusterSharding.entityRefFor(typeKey, aggregateId.asString)
   }
 }
-
-
