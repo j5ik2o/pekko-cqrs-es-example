@@ -4,7 +4,9 @@ import io.github.j5ik2o.pcqrses.command.domain.users.{DeleteError, EmailAddress,
 import org.apache.pekko.actor.typed.ActorRef
 
 object UserAccountProtocol {
-  sealed trait Command
+  sealed trait Command {
+    def id: UserAccountId
+  }
   final case class Create(id: UserAccountId, name: UserAccountName, emailAddress: EmailAddress, replyTo: ActorRef[CreateReply]) extends Command
   final case class Rename(id: UserAccountId, newName: UserAccountName, replyTo: ActorRef[RenameReply]) extends Command
   final case class Delete(id: UserAccountId, replyTo: ActorRef[DeleteReply]) extends Command
@@ -24,4 +26,6 @@ object UserAccountProtocol {
   sealed trait GetReply
   final case class GetSucceeded(value: UserAccount) extends GetReply
   final case class GetNotFoundFailed(id: UserAccountId) extends GetReply
+
+  final case class Stop(id: UserAccountId) extends Command
 }

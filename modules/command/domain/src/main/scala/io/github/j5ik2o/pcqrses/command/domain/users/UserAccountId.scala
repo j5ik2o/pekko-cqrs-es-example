@@ -9,6 +9,8 @@ trait UserAccountId extends EntityId {
 }
 
 object UserAccountId {
+  final val EntityTypeName: String = "UserAccount"
+
   def apply(value: ULID): UserAccountId = UserAccountIdImpl(value)
 
   def unapply(self: UserAccountId): Option[String] = Some(self.asString)
@@ -32,7 +34,7 @@ object UserAccountId {
     }
 
   private case class UserAccountIdImpl(ulid: ULID) extends UserAccountId {
-    override def entityTypeName: String = "UserAccount"
+    override def entityTypeName: String = EntityTypeName
     override def asString: String = ulid.toString
   }
 }

@@ -8,7 +8,7 @@ import org.apache.pekko.actor.typed.{ActorSystem, Behavior}
 import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
-object UserAccountRegistry {
+object UserAccountAggregateRegistry {
   /**
    * 停止用の特別なUserAccountId（ULIDのゼロ値を使用）
    */

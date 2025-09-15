@@ -12,7 +12,7 @@ import scala.concurrent.duration.FiniteDuration
  *
  * 環境に応じてローカルモードまたはクラスターモードを選択し、 集約アクターへのアクセスを統一的に提供する。
  */
-object GenericRegistry {
+object GenericAggregateRegistry {
 
   /**
    * 動作モード
