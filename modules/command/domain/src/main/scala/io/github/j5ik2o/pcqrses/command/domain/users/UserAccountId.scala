@@ -28,7 +28,7 @@ object UserAccountId {
     } else if (!CrockfordBase32.isValidBase32(value)) {
       Left(UserAccountIdError.InvalidFormat)
     } else {
-      Right(from(value))
+      Right(apply(ULID.fromString(value)))
     }
 
   private case class UserAccountIdImpl(ulid: ULID) extends UserAccountId {
