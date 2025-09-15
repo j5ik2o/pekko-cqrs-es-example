@@ -11,7 +11,7 @@ import scala.reflect.Selectable.reflectiveSelectable
  *
  * 各集約IDに対応するアクターへのルーティングを行う。 集約アクターは遅延作成され、必要に応じてspawnされる。
  */
-object GenericLocalRegistry {
+object GenericLocalAggregateRegistry {
 
   /**
    * ローカルレジストリのBehaviorを作成

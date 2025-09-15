@@ -24,7 +24,7 @@ import scala.util.{Failure, Success, Try}
  *   - 集約のライフサイクル管理（パッシベーション）
  *   - シャーディングプロキシによるメッセージルーティング
  */
-object GenericClusterRegistry {
+object GenericClusterAggregateRegistry {
 
   /**
    * デフォルトのアイドルタイムアウト

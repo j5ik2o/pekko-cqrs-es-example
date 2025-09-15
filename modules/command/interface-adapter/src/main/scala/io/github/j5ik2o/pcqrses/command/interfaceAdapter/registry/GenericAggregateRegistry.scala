@@ -61,11 +61,11 @@ object GenericRegistry {
     mode match {
       case Mode.LocalMode =>
         // ローカルモード：GenericLocalRegistryを使用
-        GenericLocalRegistry.create[ID, CMD](s"$aggregateName-registry")(nameF)(aggregateBehavior)
+        GenericLocalAggregateRegistry.create[ID, CMD](s"$aggregateName-registry")(nameF)(aggregateBehavior)
 
       case Mode.ClusterMode =>
         // クラスターモード：GenericClusterRegistryを使用
-        GenericClusterRegistry.create[ID, CMD](aggregateName)(
+        GenericClusterAggregateRegistry.create[ID, CMD](aggregateName)(
           extractId = extractId,
           createIdleMessage = createIdleMessage,
           stopMessageId = stopMessageId,
