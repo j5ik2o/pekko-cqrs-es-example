@@ -9,6 +9,7 @@ import scala.concurrent.duration.FiniteDuration
 import scala.util.Try
 
 object UserAccountAggregateRegistry {
+
   /**
    * 停止用の特別なUserAccountId（ULIDのゼロ値を使用）
    */
@@ -18,10 +19,10 @@ object UserAccountAggregateRegistry {
    * モードに応じたBehaviorを作成 呼び出し側がspawnのタイミングとアクター名を制御できる
    */
   def create(
-              mode: GenericAggregateRegistry.Mode = GenericAggregateRegistry.Mode.LocalMode,
-              idleTimeout: Option[FiniteDuration] = None,
-              enablePassivation: Boolean = true
-            )(implicit system: ActorSystem[?]): Behavior[UserAccountProtocol.Command] =
+    mode: GenericAggregateRegistry.Mode = GenericAggregateRegistry.Mode.LocalMode,
+    idleTimeout: Option[FiniteDuration] = None,
+    enablePassivation: Boolean = true
+  )(implicit system: ActorSystem[?]): Behavior[UserAccountProtocol.Command] =
     GenericAggregateRegistry.create[UserAccountId, UserAccountProtocol.Command](
       aggregateName = UserAccountId.EntityTypeName,
       mode = mode,

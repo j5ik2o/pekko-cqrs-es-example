@@ -5,15 +5,15 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users;
 import "google/protobuf/timestamp.proto";
 import "basic/basic.proto";
 
-message UserAccountEvent {
-  oneof event {
-    UserAccount_CreatedEvent created = 1;
-    UserAccount_RenamedEvent renamed = 2;
-    UserAccount_DeletedEvent deleted = 3;
-  }
+message UserAccountEvent_Envelope {
+  string user_account_id = 1;
+  string event_type_name = 3; // ex "UserAccountEvent.Created"
+  string event_type_version = 4; // ex "V1"
+  bytes payload = 5; // UserAccount_CreatedEvent_V1 or UserAccount_RenamedEvent_V1 or UserAccount_DeletedEvent_V1
+  google.protobuf.Timestamp occurred_at = 99;
 }
 
-message UserAccount_CreatedEvent {
+message UserAccountEvent_Created_V1 {
   string event_id = 1;
   string user_account_id = 2;
   basic.UserAccountName user_name = 3;
@@ -21,7 +21,7 @@ message UserAccount_CreatedEvent {
   google.protobuf.Timestamp occurred_at = 5;
 }
 
-message UserAccount_RenamedEvent {
+message UserAccountEvent_Renamed_V1 {
   string event_id = 1;
   string user_account_id = 2;
   basic.UserAccountName old_name = 3;
@@ -29,7 +29,7 @@ message UserAccount_RenamedEvent {
   google.protobuf.Timestamp occurred_at = 5;
 }
 
-message UserAccount_DeletedEvent {
+message UserAccountEvent_Deleted_V1 {
   string event_id = 1;
   string user_account_id = 2;
   google.protobuf.Timestamp occurred_at = 3;

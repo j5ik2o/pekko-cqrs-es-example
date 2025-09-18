@@ -61,7 +61,8 @@ object GenericAggregateRegistry {
     mode match {
       case Mode.LocalMode =>
         // ローカルモード：GenericLocalRegistryを使用
-        GenericLocalAggregateRegistry.create[ID, CMD](s"$aggregateName-registry")(nameF)(aggregateBehavior)
+        GenericLocalAggregateRegistry.create[ID, CMD](s"$aggregateName-registry")(nameF)(
+          aggregateBehavior)
 
       case Mode.ClusterMode =>
         // クラスターモード：GenericClusterRegistryを使用

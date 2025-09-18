@@ -8,11 +8,11 @@ private[users] enum UserAccountAggregateState {
   case Deleted(user: UserAccount) // 削除状態でも全情報を保持
 
   def applyEvent(event: UserAccountEvent): UserAccountAggregateState = (this, event) match {
-    case (NotCreated(id), UserAccountEvent.Created(_, entityId, name, emailAddress, _))
+    case (NotCreated(id), UserAccountEvent.Created_V1(_, entityId, name, emailAddress, _))
         if id == entityId =>
       Created(UserAccount(entityId, name, emailAddress)._1)
 
-    case (Created(user), UserAccountEvent.Renamed(_, entityId, _, newName, _))
+    case (Created(user), UserAccountEvent.Renamed_V1(_, entityId, _, newName, _))
         if user.id == entityId =>
       Created(user.rename(newName) match {
         case Right((u, _)) => u
@@ -20,7 +20,7 @@ private[users] enum UserAccountAggregateState {
           throw new IllegalStateException(s"Failed to rename user: $error")
       })
 
-    case (Created(user), UserAccountEvent.Deleted(_, entityId, _)) if user.id == entityId =>
+    case (Created(user), UserAccountEvent.Deleted_V1(_, entityId, _)) if user.id == entityId =>
       Deleted(user.delete match {
         case Right((deletedUser, _)) => deletedUser
         case Left(error) =>

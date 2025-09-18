@@ -25,7 +25,7 @@ object UserAccount {
   ): (UserAccount, UserAccountEvent) =
     (
       UserAccountImpl(id, false, name, emailAddress, createdAt, updatedAt),
-      UserAccountEvent.Created(
+      UserAccountEvent.Created_V1(
         id = DomainEventId.generate(),
         entityId = id,
         name = name,
@@ -51,7 +51,7 @@ object UserAccount {
         Left(RenameError.FamilyNameSame)
       } else {
         val updated = this.copy(name = newName, updatedAt = DateTime.now())
-        val event = UserAccountEvent.Renamed(
+        val event = UserAccountEvent.Renamed_V1(
           id = DomainEventId.generate(),
           entityId = id,
           oldName = name,
@@ -66,7 +66,7 @@ object UserAccount {
         Left(DeleteError.AlreadyDeleted)
       } else {
         val updated = copy(deleted = true, updatedAt = DateTime.now())
-        val event = UserAccountEvent.Deleted(
+        val event = UserAccountEvent.Deleted_V1(
           id = DomainEventId.generate(),
           entityId = id,
           occurredAt = DateTime.now()

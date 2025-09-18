@@ -100,7 +100,7 @@ class UserAccountSnapshotSerializerSpec extends AnyFreeSpec with Matchers {
       val ex = intercept[IllegalArgumentException] {
         serializer.fromBinary(emptyBytes, "")
       }
-      ex.getMessage should include ("Unexpected empty state in UserAccountSnapshot")
+      ex.getMessage should include("Unexpected empty state in UserAccountSnapshot")
     }
   }
 }

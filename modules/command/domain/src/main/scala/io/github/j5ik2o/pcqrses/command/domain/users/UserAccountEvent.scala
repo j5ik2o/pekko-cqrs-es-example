@@ -5,21 +5,23 @@ import io.github.j5ik2o.pcqrses.command.domain.support.{DomainEvent, DomainEvent
 
 enum UserAccountEvent extends DomainEvent {
   override type EntityIdType = UserAccountId
-  case Created(
+  case Created_V1(
     id: DomainEventId,
     entityId: UserAccountId,
     name: UserAccountName,
     emailAddress: EmailAddress,
     occurredAt: DateTime
   )
-  case Renamed(
+
+  case Renamed_V1(
     id: DomainEventId,
     entityId: UserAccountId,
     oldName: UserAccountName,
     newName: UserAccountName,
     occurredAt: DateTime
   )
-  case Deleted(
+
+  case Deleted_V1(
     id: DomainEventId,
     entityId: UserAccountId,
     occurredAt: DateTime

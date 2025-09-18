@@ -2,8 +2,14 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users
 
 import com.typesafe.config.{Config, ConfigFactory}
 import io.github.j5ik2o.pcqrses.command.domain.users.UserAccountId
-import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.{Command, CreateReply}
-import io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry.{GenericAggregateRegistry, GenericClusterAggregateRegistry}
+import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.{
+  Command,
+  CreateReply
+}
+import io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry.{
+  GenericAggregateRegistry,
+  GenericClusterAggregateRegistry
+}
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.test.ActorSpec
 import org.apache.pekko.actor.testkit.typed.scaladsl.TestProbe
 import org.apache.pekko.actor.typed.ActorRef
@@ -126,9 +132,8 @@ class ShardedUserAccountAggregateSpec
     userAccountId: UserAccountId,
     createCommand: UserAccountId => Command,
     probe: TestProbe[Reply]
-  ): Unit = {
+  ): Unit =
     registry ! createCommand(userAccountId)
-  }
 
   "UserAccountAggregate" - {
     "ユーザアカウントが未作成の状態" - {
@@ -217,6 +222,12 @@ private object UserAccountAggregateSpecHelper {
   import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.*
   import io.github.j5ik2o.pcqrses.command.domain.users.*
 
-  def createCommand(id: UserAccountId, replyTo: org.apache.pekko.actor.typed.ActorRef[CreateReply]): Command =
-    Create(id, UserAccountName(FirstName("花子"), LastName("鈴木")), EmailAddress("hanako@example.com"), replyTo)
+  def createCommand(
+    id: UserAccountId,
+    replyTo: org.apache.pekko.actor.typed.ActorRef[CreateReply]): Command =
+    Create(
+      id,
+      UserAccountName(FirstName("花子"), LastName("鈴木")),
+      EmailAddress("hanako@example.com"),
+      replyTo)
 }

@@ -10,7 +10,12 @@ import io.github.j5ik2o.pcqrses.command.domain.users.{
   UserAccountId,
   UserAccountName
 }
-import io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users.UserAccountEvent as ProtoUserAccountEvent
+import io.github.j5ik2o.pcqrses.command.interfaceAdapter.persistence.users.{
+  UserAccountEvent_Envelope,
+  UserAccountEvent_Created_V1,
+  UserAccountEvent_Renamed_V1,
+  UserAccountEvent_Deleted_V1
+}
 import org.scalatest.funsuite.AnyFunSuiteLike
 import org.scalatest.matchers.should.Matchers
 
@@ -29,9 +34,9 @@ class UserAccountEventSerializerSpec extends AnyFunSuiteLike with Matchers {
     val email = EmailAddress("taro.yamada@example.com")
     val occurredAt = DateTime.fromSecondsAndNanos(1710000000L, 123456789)
 
-    serializer.manifest(UserAccountEvent.Created(id, entityId, name, email, occurredAt)) shouldBe "Created"
-    serializer.manifest(UserAccountEvent.Renamed(id, entityId, name, name, occurredAt)) shouldBe "Renamed"
-    serializer.manifest(UserAccountEvent.Deleted(id, entityId, occurredAt)) shouldBe "Deleted"
+    serializer.manifest(UserAccountEvent.Created_V1(id, entityId, name, email, occurredAt)) shouldBe "Envelope"
+    serializer.manifest(UserAccountEvent.Renamed_V1(id, entityId, name, name, occurredAt)) shouldBe "Envelope"
+    serializer.manifest(UserAccountEvent.Deleted_V1(id, entityId, occurredAt)) shouldBe "Envelope"
   }
 
   test("toBinary should encode Created correctly") {
@@ -41,12 +46,15 @@ class UserAccountEventSerializerSpec extends AnyFunSuiteLike with Matchers {
     val email = EmailAddress("hanako.suzuki@example.com")
     val occurredAt = DateTime.fromSecondsAndNanos(1720000000L, 111222333)
 
-    val ev = UserAccountEvent.Created(id, entityId, name, email, occurredAt)
+    val ev = UserAccountEvent.Created_V1(id, entityId, name, email, occurredAt)
     val bytes = serializer.toBinary(ev)
-    val proto = ProtoUserAccountEvent.parseFrom(bytes)
+    val env = UserAccountEvent_Envelope.parseFrom(bytes)
+    env.userAccountId shouldBe entityId.asString
+    env.eventTypeName shouldBe "UserAccountEvent.Created"
+    env.eventTypeVersion shouldBe "V1"
+    (env.occurredAt.get.seconds, env.occurredAt.get.nanos) shouldBe occurredAt.toSecondsAndNanos
 
-    proto.event.isCreated shouldBe true
-    val c = proto.getCreated
+    val c = UserAccountEvent_Created_V1.parseFrom(env.payload.toByteArray)
     c.eventId shouldBe id.asString
     c.userAccountId shouldBe entityId.asString
     c.userName.get.firstName shouldBe name.breachEncapsulationOfFirstName.asString
@@ -62,12 +70,15 @@ class UserAccountEventSerializerSpec extends AnyFunSuiteLike with Matchers {
     val newName = UserAccountName(FirstName("Robert"), LastName("Johnson"))
     val occurredAt = DateTime.fromSecondsAndNanos(1730000000L, 222333444)
 
-    val ev = UserAccountEvent.Renamed(id, entityId, oldName, newName, occurredAt)
+    val ev = UserAccountEvent.Renamed_V1(id, entityId, oldName, newName, occurredAt)
     val bytes = serializer.toBinary(ev)
-    val proto = ProtoUserAccountEvent.parseFrom(bytes)
+    val env = UserAccountEvent_Envelope.parseFrom(bytes)
+    env.userAccountId shouldBe entityId.asString
+    env.eventTypeName shouldBe "UserAccountEvent.Renamed"
+    env.eventTypeVersion shouldBe "V1"
+    (env.occurredAt.get.seconds, env.occurredAt.get.nanos) shouldBe occurredAt.toSecondsAndNanos
 
-    proto.event.isRenamed shouldBe true
-    val r = proto.getRenamed
+    val r = UserAccountEvent_Renamed_V1.parseFrom(env.payload.toByteArray)
     r.eventId shouldBe id.asString
     r.userAccountId shouldBe entityId.asString
     r.oldName.get.firstName shouldBe oldName.breachEncapsulationOfFirstName.asString
@@ -82,22 +93,25 @@ class UserAccountEventSerializerSpec extends AnyFunSuiteLike with Matchers {
     val entityId = UserAccountId.generate()
     val occurredAt = DateTime.fromSecondsAndNanos(1740000000L, 333444555)
 
-    val ev = UserAccountEvent.Deleted(id, entityId, occurredAt)
+    val ev = UserAccountEvent.Deleted_V1(id, entityId, occurredAt)
     val bytes = serializer.toBinary(ev)
-    val proto = ProtoUserAccountEvent.parseFrom(bytes)
+    val env = UserAccountEvent_Envelope.parseFrom(bytes)
+    env.userAccountId shouldBe entityId.asString
+    env.eventTypeName shouldBe "UserAccountEvent.Deleted"
+    env.eventTypeVersion shouldBe "V1"
+    (env.occurredAt.get.seconds, env.occurredAt.get.nanos) shouldBe occurredAt.toSecondsAndNanos
 
-    proto.event.isDeleted shouldBe true
-    val d = proto.getDeleted
+    val d = UserAccountEvent_Deleted_V1.parseFrom(env.payload.toByteArray)
     d.eventId shouldBe id.asString
     d.userAccountId shouldBe entityId.asString
     (d.occurredAt.get.seconds, d.occurredAt.get.nanos) shouldBe occurredAt.toSecondsAndNanos
   }
 
   test("fromBinary should fail on Empty event") {
-    val empty = ProtoUserAccountEvent().toByteArray
+    val empty = UserAccountEvent_Envelope().toByteArray
     val ex = intercept[IllegalArgumentException] {
       serializer.fromBinary(empty, "")
     }
-    ex.getMessage should include("Unexpected Empty event in UserAccountEvent")
+    ex.getMessage should include("Unexpected event type")
   }
 }
