@@ -21,7 +21,8 @@ class UserAccountUseCase(userAccountAggregateRef: ActorRef[UserAccountProtocol.C
     userAccountName: UserAccountName,
     emailAddress: EmailAddress): IO[UserAccountUseCaseError, UserAccountId] =
     for {
-      _ <- ZIO.succeed(logger.info(s"Creating UserAccount with userAccountName: ${userAccountName.asString}"))
+      _ <- ZIO.succeed(
+        logger.info(s"Creating UserAccount with userAccountName: ${userAccountName.asString}"))
       userAccountId <- ZIO.succeed(UserAccountId.generate())
       reply <- askActor[UserAccountProtocol.CreateReply] { replyTo =>
         UserAccountProtocol.Create(
