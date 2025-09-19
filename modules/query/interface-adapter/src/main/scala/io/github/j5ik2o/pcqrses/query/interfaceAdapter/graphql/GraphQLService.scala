@@ -30,17 +30,22 @@ class GraphQLService(
    * @param query GraphQLクエリ文字列
    * @param operationName オプションのオペレーション名
    * @param variables オプションの変数マップ
+   * @param isIntrospection イントロスペクションクエリかどうか
    * @return 実行結果のJSON
    */
   def executeQuery(
     query: String,
     operationName: Option[String] = None,
-    variables: Option[Json] = None
+    variables: Option[Json] = None,
+    isIntrospection: Boolean = false
   ): Future[Json] = {
     QueryParser.parse(query) match {
       case Success(queryAst) =>
         val context = ResolverContext.fromSlickDatabase(db)
         val vars = variables.getOrElse(Json.obj())
+
+        // introspectionクエリの場合は深さ制限を緩和
+        val maxDepth = if (isIntrospection) 30 else 10
 
         Executor.execute(
           schema = schema,
@@ -49,7 +54,7 @@ class GraphQLService(
           variables = vars,
           operationName = operationName,
           queryReducers = List(
-            QueryReducer.rejectMaxDepth(10),
+            QueryReducer.rejectMaxDepth(maxDepth),
             QueryReducer.rejectComplexQueries(1000.0, (complexity: Double, _: Any) =>
               new Exception(s"Query too complex: $complexity"))
           )
@@ -96,7 +101,7 @@ class GraphQLService(
         val variables = json.hcursor.downField("variables").as[Json].toOption
 
         query match {
-          case Some(q) => executeQuery(q, operationName, variables)
+          case Some(q) => executeQuery(q, operationName, variables, isIntrospection = false)
           case None =>
             Future.successful(
               Json.obj("errors" -> Json.arr(Json.obj("message" -> Json.fromString("No query provided"))))
@@ -118,7 +123,7 @@ class GraphQLService(
   def introspectionQuery(): Future[Json] = {
     import sangria.renderer.QueryRenderer
     val introspectionQueryString = QueryRenderer.render(sangria.introspection.introspectionQuery)
-    executeQuery(introspectionQueryString)
+    executeQuery(introspectionQueryString, isIntrospection = true)
   }
 }
 
