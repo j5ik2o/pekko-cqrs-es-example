@@ -19,6 +19,8 @@ export AWS_DEFAULT_REGION=ap-northeast-1
 export PORT=50503
 export HOST=localhost
 export ENDPOINT_URL=http://${HOST}:${PORT}
+export SCALA_VERSION=3.6.2
+export PROJECT_NAME=read-model-updater
 
 # Lambda関数名
 FUNCTION_NAME="pcqrses-read-model-updater"
@@ -52,7 +54,7 @@ export PAGER=cat
 sbt --batch "project readModelUpdater" assembly
 
 # Assembly JARのパス
-ASSEMBLY_JAR_PATH="apps/read-model-updater/target/scala-3.6.2/read-model-updater-lambda.jar"
+ASSEMBLY_JAR_PATH="apps/${PROJECT_NAME}/target/${SCALA_VERSION}/${PROJECT_NAME}-lambda.jar"
 
 # Assembly JARが存在することを確認
 if [ ! -f "$ASSEMBLY_JAR_PATH" ]; then
@@ -147,7 +149,7 @@ if [ "$FUNCTION_EXISTS" = "true" ]; then
             --endpoint-url $ENDPOINT_URL \
             --function-name $FUNCTION_NAME \
             --runtime java17 \
-            --handler io.github.j5ik2o.pcqrses.readmodelupdater.LambdaHandler \
+            --handler io.github.j5ik2o.pcqrses.readModelUpdater.LambdaHandler \
             --role arn:aws:iam::000000000000:role/lambda-role \
             --zip-file fileb://$ASSEMBLY_JAR_PATH \
             --timeout 300 \
@@ -163,7 +165,7 @@ if [ "$FUNCTION_EXISTS" = "true" ]; then
             --endpoint-url $ENDPOINT_URL \
             --function-name $FUNCTION_NAME \
             --runtime java17 \
-            --handler io.github.j5ik2o.pcqrses.readmodelupdater.LambdaHandler \
+            --handler io.github.j5ik2o.pcqrses.readModelUpdater.LambdaHandler \
             --timeout 300 \
             --memory-size 512 \
             --environment file://$ENV_JSON_FILE
@@ -185,7 +187,7 @@ else
         --endpoint-url $ENDPOINT_URL \
         --function-name $FUNCTION_NAME \
         --runtime java17 \
-        --handler io.github.j5ik2o.pcqrses.readmodelupdater.LambdaHandler \
+        --handler io.github.j5ik2o.pcqrses.readModelUpdater.LambdaHandler \
         --role arn:aws:iam::000000000000:role/lambda-role \
         --zip-file fileb://$ASSEMBLY_JAR_PATH \
         --timeout 300 \
@@ -292,7 +294,7 @@ echo "🧹 デプロイメント完了"
 echo ""
 echo "✅ Lambda関数のデプロイが完了しました!"
 echo "   関数名: $FUNCTION_NAME"
-echo "   ハンドラー: io.github.j5ik2o.pcqrses.readmodelupdater.LambdaHandler"
+echo "   ハンドラー: io.github.j5ik2o.pcqrses.readModelUpdater.LambdaHandler"
 echo "   ストリーム ARN: $STREAM_ARN"
 echo ""
 echo "📋 確認用コマンド:"

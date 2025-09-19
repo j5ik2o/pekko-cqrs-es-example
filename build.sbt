@@ -3,12 +3,15 @@ import jp.co.septeni_original.sbt.dao.generator.model.ColumnDesc
 
 import scala.sys.process.Process
 
+val dbType = "postgresql"
 val basename = "pcqrses"
 val scala3Version = "3.6.2"
-val databaseName = s"${basename}_development"
+val dbName = s"${basename}_db"
+val dbUserName = "postgres"
+val dbPassword = "postgres"
 val generatorPortNumber = 55432 // DAO生成専用ポート
 lazy val generatorDatabaseUrl =
-  s"jdbc:postgresql://localhost:${generatorPortNumber}/${databaseName}?user=postgres&password=postgres"
+  s"jdbc:$dbType://localhost:$generatorPortNumber/$dbName?user=$dbUserName&password=$dbPassword"
 
 ThisBuild / organization := "io.github.j5ik2o"
 ThisBuild / scalaVersion := scala3Version
@@ -187,7 +190,7 @@ lazy val commandApi = (project in file("apps/command-api"))
   .settings(dockerSettings)
   .settings(
     name := "command-api",
-    Compile / mainClass := Some("io.github.j5ik2o.pcqrses.commandapi.Main"),
+    Compile / mainClass := Some("io.github.j5ik2o.pcqrses.commandApi.MainActor"),
     Docker / packageName := s"${basename}-command-api",
     Docker / version := "0.1.0",
     Docker / dockerExposedPorts := Seq(18080),
@@ -268,8 +271,8 @@ lazy val queryInterfaceAdapter = (project in file("modules/query/interface-adapt
     // DAO生成用のJDBC設定（別ポート）
     generator / driverClassName := "org.postgresql.Driver",
     generator / jdbcUrl := generatorDatabaseUrl,
-    generator / jdbcUser := "postgres",
-    generator / jdbcPassword := "postgres",
+    generator / jdbcUser := dbUserName,
+    generator / jdbcPassword := dbPassword,
     // PostgreSQL起動タスク（DAO生成用）
     TaskKey[Unit]("startPostgresForGenerate") := {
       Process(s"docker rm -f ${generatorDockerName}").!
@@ -279,11 +282,11 @@ lazy val queryInterfaceAdapter = (project in file("modules/query/interface-adapt
         "--name",
         generatorDockerName,
         "-e",
-        s"POSTGRES_USER=postgres",
+        s"POSTGRES_USER=$dbUserName",
         "-e",
-        s"POSTGRES_PASSWORD=postgres",
+        s"POSTGRES_PASSWORD=$dbPassword",
         "-e",
-        s"POSTGRES_DB=$databaseName",
+        s"POSTGRES_DB=$dbName",
         "-p",
         s"${generatorPortNumber}:5432",
         "-d",
@@ -334,7 +337,7 @@ lazy val queryApi = (project in file("apps/query-api"))
   .settings(dockerSettings)
   .settings(
     name := "query-api",
-    Compile / mainClass := Some(s"io.github.j5ik2o.${basename}.queryapi.Main"),
+    Compile / mainClass := Some(s"io.github.j5ik2o.${basename}.queryApi.MainActor"),
     Docker / packageName := s"${basename}-query-api",
     Docker / version := "0.1.0",
     Docker / dockerExposedPorts := Seq(18082),
@@ -350,7 +353,7 @@ lazy val readModelUpdater = (project in file("apps/read-model-updater"))
   .settings(dockerSettings)
   .settings(
     name := "read-model-updater",
-    Compile / mainClass := Some(s"io.github.j5ik2o.${basename}.readmodelupdater.Main"),
+    Compile / mainClass := Some(s"io.github.j5ik2o.${basename}.readModelUpdater.Main"),
     // Docker設定
     Docker / packageName := s"${basename}-read-model-updater",
     Docker / version := "0.1.0",
@@ -361,7 +364,7 @@ lazy val readModelUpdater = (project in file("apps/read-model-updater"))
       "modules/infrastructure/src/main/resources/application.conf") -> "conf/application.conf",
     Universal / javaOptions ++= Seq("-Dconfig.file=conf/application.conf"),
     assembly / assemblyJarName := "read-model-updater-lambda.jar",
-    assembly / mainClass := Some(s"io.github.j5ik2o.${basename}.readmodelupdater.LambdaHandler"),
+    assembly / mainClass := Some(s"io.github.j5ik2o.${basename}.readModelUpdater.LambdaHandler"),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", xs @ _*) => MergeStrategy.discard
       case PathList("reference.conf") => MergeStrategy.concat
