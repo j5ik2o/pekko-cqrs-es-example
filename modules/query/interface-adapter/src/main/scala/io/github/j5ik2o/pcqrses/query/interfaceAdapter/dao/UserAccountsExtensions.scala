@@ -8,5 +8,7 @@ trait UserAccountsExtensions {
       dao.result
     def findByIds(ids: Seq[String]): DBIO[Seq[UserAccountsRecord]] =
       dao.filter(_.id inSet ids).result
+    def findById(id: String): DBIO[Option[UserAccountsRecord]] =
+      dao.filter(_.id === id).result.headOption
   }
 }
