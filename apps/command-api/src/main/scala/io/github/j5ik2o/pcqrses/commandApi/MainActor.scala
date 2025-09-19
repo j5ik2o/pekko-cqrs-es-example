@@ -1,28 +1,53 @@
 package io.github.j5ik2o.pcqrses.commandApi
 
 import io.github.j5ik2o.pcqrses.commandApi.config.{LoadBalancerConfig, ServerConfig}
-import org.apache.pekko.{pattern, Done}
 import org.apache.pekko.actor.CoordinatedShutdown
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import org.apache.pekko.actor.typed.{scaladsl, ActorSystem, Behavior, Scheduler}
+import org.apache.pekko.actor.typed.{ActorSystem, Behavior, Scheduler, scaladsl}
 import org.apache.pekko.cluster.typed.Cluster
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.management.cluster.bootstrap.ClusterBootstrap
 import org.apache.pekko.management.scaladsl.PekkoManagement
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
+import org.apache.pekko.{Done, pattern}
+import zio.*
 
 import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
-import scala.concurrent.duration.Duration
-import zio.*
 
-object MainActor extends App {
-  private sealed trait Command
-  private case object Start extends Command
-  private case object Stop extends Command
+object MainActor {
+  sealed trait Command
+  case object Start extends Command
+  case object Stop extends Command
   private case class ServerStarted(binding: Http.ServerBinding, startTime: Long) extends Command
   private case class ServerFailed(ex: Throwable, startTime: Long) extends Command
+
+  def apply(): Behavior[Command] =
+    Behaviors.setup { context =>
+      implicit val system: ActorSystem[Nothing] = context.system
+      implicit val materializer: Materializer = Materializer(system)
+      implicit val executionContext: ExecutionContextExecutor = system.executionContext
+      implicit val scheduler: Scheduler = system.scheduler
+      implicit val zioRuntime: Runtime[Any] = Runtime.default
+
+      val serverConfig = ServerConfig.from(system.settings.config.getConfig("pcqrses.command-api"))
+      val isClusterEnabled = system.settings.config.hasPath("pekko.cluster.enabled") &&
+        system.settings.config.getBoolean("pekko.cluster.enabled")
+
+      implicit val timeout: Timeout = Timeout(serverConfig.actorTimeout)
+
+      context.log.info(
+        s"Command API server initializing... (timeout: ${serverConfig.actorTimeout}, host: ${serverConfig.host}:${serverConfig.port}, cluster: $isClusterEnabled)")
+
+      if (isClusterEnabled) {
+        initializeCluster(context)
+      }
+
+      // TODO: GraphQL Handler(Mutation) の初期化
+
+      Behaviors.same
+    }
 
   private def startManagementWithGracefulShutdown(
     context: scaladsl.ActorContext[Command],
@@ -79,7 +104,7 @@ object MainActor extends App {
     val coordinatedShutdown = CoordinatedShutdown(system)
     val config = system.settings.config
 
-    val lbConfig = LoadBalancerConfig.from(config.getConfig("command-api"))
+    val lbConfig = LoadBalancerConfig.from(config.getConfig("pcqrses.command-api"))
 
     startManagementWithGracefulShutdown(context, management, coordinatedShutdown, lbConfig)
 
@@ -90,34 +115,4 @@ object MainActor extends App {
     }
   }
 
-  private def apply(): Behavior[Command] =
-    Behaviors.setup { context =>
-      implicit val system: ActorSystem[Nothing] = context.system
-      implicit val materializer: Materializer = Materializer(system)
-      implicit val executionContext: ExecutionContextExecutor = system.executionContext
-      implicit val scheduler: Scheduler = system.scheduler
-      implicit val zioRuntime: Runtime[Any] = Runtime.default
-
-      val serverConfig = ServerConfig.from(system.settings.config.getConfig("command-api"))
-      val isClusterEnabled = system.settings.config.hasPath("pekko.cluster.enabled") &&
-        system.settings.config.getBoolean("pekko.cluster.enabled")
-
-      implicit val timeout: Timeout = Timeout(serverConfig.actorTimeout)
-
-      context.log.info(
-        s"Command API server initializing... (timeout: ${serverConfig.actorTimeout}, host: ${serverConfig.host}:${serverConfig.port}, cluster: $isClusterEnabled)")
-
-      if (isClusterEnabled) {
-        initializeCluster(context)
-      }
-
-      // TODO: GraphQL Handler(Mutation) の初期化
-
-      Behaviors.same
-    }
-
-  private val system: ActorSystem[Command] = ActorSystem(apply(), "command-api-system")
-  system ! Start
-
-  Await.result(system.whenTerminated, Duration.Inf)
 }

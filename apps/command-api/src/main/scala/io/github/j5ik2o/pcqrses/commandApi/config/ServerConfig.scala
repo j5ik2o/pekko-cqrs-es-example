@@ -13,12 +13,11 @@ final case class ServerConfig(
 
 object ServerConfig {
   def from(config: Config): ServerConfig = {
-    val commandApiconfig = config.getConfig("pcqrses.command-api")
     ServerConfig(
-      host = commandApiconfig.getString("host"),
-      port = commandApiconfig.getInt("port"),
-      actorTimeout = commandApiconfig.getDuration("actor-timeout").toScala,
-      shutdownTimeout = commandApiconfig.getDuration("shutdown-timeout").toScala
+      host = config.getString("server.host"),
+      port = config.getInt("server.port"),
+      actorTimeout = config.getDuration("actor-timeout").toScala,
+      shutdownTimeout = config.getDuration("server.shutdown-timeout").toScala
     )
   }
 }
