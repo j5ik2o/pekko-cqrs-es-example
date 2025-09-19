@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <root level="INFO">
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <!-- Pekko logging -->
+    <logger name="org.apache.pekko" level="INFO" />
+
+    <!-- Application logging -->
+    <logger name="io.github.j5ik2o.pcqrses" level="DEBUG" />
+
+    <!-- Query API specific logging -->
+    <logger name="io.github.j5ik2o.pcqrses.queryApi" level="DEBUG" />
+
+    <!-- GraphQL logging -->
+    <logger name="io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql" level="DEBUG" />
+
+    <!-- Slick logging -->
+    <logger name="slick" level="INFO" />
+    <logger name="slick.jdbc" level="DEBUG" />
+
+    <!-- HikariCP logging -->
+    <logger name="com.zaxxer.hikari" level="INFO" />
+</configuration>
