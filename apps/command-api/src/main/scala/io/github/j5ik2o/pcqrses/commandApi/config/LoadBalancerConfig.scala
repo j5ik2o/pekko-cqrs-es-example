@@ -5,9 +5,9 @@ import com.typesafe.config.Config
 import scala.jdk.DurationConverters.*
 
 final case class LoadBalancerConfig(
-                                     detachWaitDuration: scala.concurrent.duration.FiniteDuration,
-                                     healthCheckGracePeriod: scala.concurrent.duration.FiniteDuration
-                                   )
+  detachWaitDuration: scala.concurrent.duration.FiniteDuration,
+  healthCheckGracePeriod: scala.concurrent.duration.FiniteDuration
+)
 
 object LoadBalancerConfig {
   def from(config: Config): LoadBalancerConfig =

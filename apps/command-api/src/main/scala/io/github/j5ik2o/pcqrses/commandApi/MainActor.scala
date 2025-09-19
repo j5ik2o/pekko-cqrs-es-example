@@ -1,10 +1,10 @@
 package io.github.j5ik2o.pcqrses.commandApi
 
 import io.github.j5ik2o.pcqrses.commandApi.config.{LoadBalancerConfig, ServerConfig}
-import org.apache.pekko.{Done, pattern}
+import org.apache.pekko.{pattern, Done}
 import org.apache.pekko.actor.CoordinatedShutdown
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import org.apache.pekko.actor.typed.{ActorSystem, Behavior, Scheduler, scaladsl}
+import org.apache.pekko.actor.typed.{scaladsl, ActorSystem, Behavior, Scheduler}
 import org.apache.pekko.cluster.typed.Cluster
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.management.cluster.bootstrap.ClusterBootstrap
@@ -16,22 +16,23 @@ import scala.concurrent.duration.*
 import scala.concurrent.{Await, ExecutionContextExecutor, Future}
 import scala.concurrent.duration.Duration
 import zio.*
+
 object MainActor extends App {
-  sealed trait Command
-  case object Start extends Command
-  case object Stop extends Command
+  private sealed trait Command
+  private case object Start extends Command
+  private case object Stop extends Command
   private case class ServerStarted(binding: Http.ServerBinding, startTime: Long) extends Command
   private case class ServerFailed(ex: Throwable, startTime: Long) extends Command
 
   private def startManagementWithGracefulShutdown(
-                                                   context: scaladsl.ActorContext[Command],
-                                                   management: PekkoManagement,
-                                                   coordinatedShutdown: CoordinatedShutdown,
-                                                   lbConfig: LoadBalancerConfig
-                                                 )(implicit
-                                                   executionContext: ExecutionContextExecutor,
-                                                   system: ActorSystem[?]
-                                                 ): Unit = {
+    context: scaladsl.ActorContext[Command],
+    management: PekkoManagement,
+    coordinatedShutdown: CoordinatedShutdown,
+    lbConfig: LoadBalancerConfig
+  )(implicit
+    executionContext: ExecutionContextExecutor,
+    system: ActorSystem[?]
+  ): Unit = {
     val managementFuture = management.start().map { uri =>
       context.log.info(s"Pekko Management started on $uri")
 
@@ -66,6 +67,7 @@ object MainActor extends App {
         context.log.error(s"Failed to start Pekko Management: ${ex.getMessage}")
     }
   }
+
   private def initializeCluster(context: scaladsl.ActorContext[Command]): Unit = {
     implicit val system: ActorSystem[Nothing] = context.system
     implicit val executionContext: ExecutionContextExecutor = system.executionContext
@@ -82,13 +84,14 @@ object MainActor extends App {
     startManagementWithGracefulShutdown(context, management, coordinatedShutdown, lbConfig)
 
     if (system.settings.config.hasPath(
-      "pekko.management.cluster.bootstrap.contact-point-discovery.discovery-method")) {
+        "pekko.management.cluster.bootstrap.contact-point-discovery.discovery-method")) {
       ClusterBootstrap(system).start()
       context.log.info("Cluster Bootstrap started")
     }
   }
-  def apply(): Behavior[Command] = {
-    Behaviors.setup{ context =>
+
+  private def apply(): Behavior[Command] =
+    Behaviors.setup { context =>
       implicit val system: ActorSystem[Nothing] = context.system
       implicit val materializer: Materializer = Materializer(system)
       implicit val executionContext: ExecutionContextExecutor = system.executionContext
@@ -112,9 +115,8 @@ object MainActor extends App {
 
       Behaviors.same
     }
-  }
 
-  val system = ActorSystem(apply(), "command-api-system")
+  private val system: ActorSystem[Command] = ActorSystem(apply(), "command-api-system")
   system ! Start
 
   Await.result(system.whenTerminated, Duration.Inf)

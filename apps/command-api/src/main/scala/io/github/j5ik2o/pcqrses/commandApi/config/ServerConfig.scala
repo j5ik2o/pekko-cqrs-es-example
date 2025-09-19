@@ -4,20 +4,21 @@ import com.typesafe.config.Config
 
 import scala.jdk.DurationConverters.*
 
-// 設定値を保持するケースクラス
 final case class ServerConfig(
-                               host: String,
-                               port: Int,
-                               actorTimeout: scala.concurrent.duration.FiniteDuration,
-                               shutdownTimeout: scala.concurrent.duration.FiniteDuration
-                             )
+  host: String,
+  port: Int,
+  actorTimeout: scala.concurrent.duration.FiniteDuration,
+  shutdownTimeout: scala.concurrent.duration.FiniteDuration
+)
 
 object ServerConfig {
-  def from(config: Config): ServerConfig =
+  def from(config: Config): ServerConfig = {
+    val commandApiconfig = config.getConfig("pcqrses.command-api")
     ServerConfig(
-      host = config.getString("server.host"),
-      port = config.getInt("server.port"),
-      actorTimeout = config.getDuration("actor-timeout").toScala,
-      shutdownTimeout = config.getDuration("server.shutdown-timeout").toScala
+      host = commandApiconfig.getString("host"),
+      port = commandApiconfig.getInt("port"),
+      actorTimeout = commandApiconfig.getDuration("actor-timeout").toScala,
+      shutdownTimeout = commandApiconfig.getDuration("shutdown-timeout").toScala
     )
+  }
 }
