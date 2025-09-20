@@ -3,27 +3,22 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.schema
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.ResolverContext
 import sangria.schema.*
 
-import java.time.Instant
-
 /**
  * GraphQL型定義
  */
 trait TypeDefinitions extends ScalarTypes {
 
   /**
-   * UserAccount型
+   * CreateUserAccount結果型（IDのみを返す）
    */
-  val UserAccountType: ObjectType[ResolverContext, UserAccountOutput] = ObjectType(
-    "UserAccount",
-    "A user account",
-    fields[ResolverContext, UserAccountOutput](
-      Field("id", StringType, resolve = _.value.id),
-      Field("name", StringType, resolve = _.value.name),
-      Field("emailAddress", StringType, resolve = _.value.emailAddress),
-      Field("createdAt", DateTimeType, resolve = _.value.createdAt),
-      Field("updatedAt", OptionType(DateTimeType), resolve = _.value.updatedAt)
+  val CreateUserAccountResultType: ObjectType[ResolverContext, CreateUserAccountResult] =
+    ObjectType(
+      "CreateUserAccountResult",
+      "Result of creating a user account",
+      fields[ResolverContext, CreateUserAccountResult](
+        Field("id", StringType, resolve = _.value.id)
+      )
     )
-  )
 
   /**
    * CreateUserAccountInput引数（直接InputFieldsを定義）
@@ -55,14 +50,10 @@ trait TypeDefinitions extends ScalarTypes {
 }
 
 /**
- * UserAccount出力型
+ * CreateUserAccount結果型
  */
-case class UserAccountOutput(
-  id: String,
-  name: String,
-  emailAddress: String,
-  createdAt: Instant,
-  updatedAt: Option[Instant] = None
+case class CreateUserAccountResult(
+  id: String
 )
 
 /**

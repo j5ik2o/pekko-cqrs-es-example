@@ -6,13 +6,11 @@ import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.errors.{
   ValidationError
 }
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.schema.{
-  TypeDefinitions,
-  UserAccountOutput
+  CreateUserAccountResult,
+  TypeDefinitions
 }
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.validators.CreateUserAccountInputValidator
 import sangria.schema.*
-
-import java.time.Instant
 
 /**
  * GraphQL Mutation リゾルバー
@@ -25,7 +23,7 @@ trait MutationResolver extends TypeDefinitions {
     fields[ResolverContext, Unit](
       Field(
         "createUserAccount",
-        UserAccountType,
+        CreateUserAccountResultType,
         description = Some("Create a new user account"),
         arguments = CreateUserAccountInputArg :: Nil,
         resolve = ctx => {
@@ -45,14 +43,7 @@ trait MutationResolver extends TypeDefinitions {
                       CommandError(
                         s"Failed to create user account: ${error.toString}",
                         Some("CREATE_USER_FAILED")),
-                    userAccountId =>
-                      UserAccountOutput(
-                        id = userAccountId.asString,
-                        name = input.name,
-                        emailAddress = input.emailAddress,
-                        createdAt = Instant.now(),
-                        updatedAt = None
-                      )
+                    userAccountId => CreateUserAccountResult(id = userAccountId.asString)
                   )
               )
           }
