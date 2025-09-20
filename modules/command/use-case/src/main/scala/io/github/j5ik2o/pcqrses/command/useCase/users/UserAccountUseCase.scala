@@ -2,50 +2,50 @@ package io.github.j5ik2o.pcqrses.command.useCase.users
 
 import io.github.j5ik2o.pcqrses.command.domain.users.{EmailAddress, UserAccountId, UserAccountName}
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol
-import io.github.j5ik2o.pcqrses.infrastructure.effect.PekkoInterop
-import org.apache.pekko.actor.typed.scaladsl.AskPattern.*
 import org.apache.pekko.actor.typed.{ActorRef, Scheduler}
 import org.apache.pekko.util.Timeout
-import org.slf4j.LoggerFactory
-import zio.{IO, Task, ZIO}
+import zio.IO
 
 import scala.concurrent.ExecutionContext
 
-final class UserAccountUseCase(userAccountAggregateRef: ActorRef[UserAccountProtocol.Command])(implicit
-  timeout: Timeout,
-  scheduler: Scheduler,
-  ec: ExecutionContext) {
-  private val logger = LoggerFactory.getLogger(this.getClass)
-
+/**
+ * UserAccountユースケースのインターフェース
+ * 
+ * ビジネスロジックのインターフェースを定義し、
+ * テストでモック化可能にする
+ */
+trait UserAccountUseCase {
+  
+  /**
+   * ユーザーアカウントを作成する
+   * 
+   * @param userAccountName ユーザー名
+   * @param emailAddress メールアドレス
+   * @return 作成されたユーザーアカウントのID
+   */
   def createUserAccount(
     userAccountName: UserAccountName,
-    emailAddress: EmailAddress): IO[UserAccountUseCaseError, UserAccountId] =
-    for {
-      _ <- ZIO.succeed(
-        logger.info(s"Creating UserAccount with userAccountName: ${userAccountName.asString}"))
-      userAccountId <- ZIO.succeed(UserAccountId.generate())
-      reply <- askActor[UserAccountProtocol.CreateReply] { replyTo =>
-        UserAccountProtocol.Create(
-          id = userAccountId,
-          name = userAccountName,
-          emailAddress = emailAddress,
-          replyTo = replyTo
-        )
-      }.mapError(e =>
-        UserAccountUseCaseError.UnexpectedError(
-          s"Failed to communicate with actor: ${e.getMessage}",
-          Some(e)))
-      result <- reply match {
-        case UserAccountProtocol.CreateSucceeded(id) =>
-          ZIO.succeed(logger.info(s"UserAccount creation succeeded for ID: ${id.asString}")) *>
-            ZIO.succeed(id)
-      }
-    } yield result
+    emailAddress: EmailAddress
+  ): IO[UserAccountUseCaseError, UserAccountId]
+}
 
-  private def askActor[R](
-    createMessage: ActorRef[R] => UserAccountProtocol.Command
-  ): Task[R] =
-    PekkoInterop.fromFuture {
-      userAccountAggregateRef.ask(createMessage)
-    }
+object UserAccountUseCase {
+  
+  /**
+   * UserAccountUseCaseのインスタンスを作成する
+   * 
+   * @param userAccountAggregateRef ユーザーアカウントアグリゲートのActorRef
+   * @param timeout アクタータイムアウト
+   * @param scheduler スケジューラー
+   * @param ec 実行コンテキスト
+   * @return UserAccountUseCaseのインスタンス
+   */
+  def apply(
+    userAccountAggregateRef: ActorRef[UserAccountProtocol.Command]
+  )(implicit
+    timeout: Timeout,
+    scheduler: Scheduler,
+    ec: ExecutionContext
+  ): UserAccountUseCase =
+    new UserAccountUseCaseImpl(userAccountAggregateRef)
 }

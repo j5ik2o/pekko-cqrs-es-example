@@ -64,7 +64,7 @@ object MainActor {
     val mode = UserAccountAggregateRegistry.modeFromConfig(system)
     val b = UserAccountAggregateRegistry.create(mode)
     val ref = context.spawn(b, "UserAccountAggregateRegistry")
-    val h = new UserAccountUseCase(ref)
+    val h: UserAccountUseCase = UserAccountUseCase(ref)
     // GraphQLHandlerの初期化ロジックをここに実装
     context.log.info("GraphQL Handler initialized")
   }
