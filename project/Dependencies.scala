@@ -155,4 +155,8 @@ object Dependencies {
     val databind = "com.fasterxml.jackson.core" % "jackson-databind" % "2.18.2"
     val moduleScala = "com.fasterxml.jackson.module" %% "jackson-module-scala" % "2.18.2"
   }
+
+  object scalamock {
+    val scalatest = "org.scalamock" %% "scalamock" % "6.0.0"
+  }
 }

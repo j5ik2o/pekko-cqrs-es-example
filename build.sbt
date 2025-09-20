@@ -165,6 +165,7 @@ lazy val commandInterfaceAdapter = (project in file("modules/command/interface-a
       apachePekko.persistenceTyped,
       apachePekko.actorTestKitTyped % Test,
       apachePekko.persistenceTestkit % Test,
+      scalamock.scalatest % Test,
       apachePekko.discovery,
       apachePekko.clusterTyped,
       apachePekko.clusterShardingTyped,
