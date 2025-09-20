@@ -169,7 +169,9 @@ lazy val commandInterfaceAdapter = (project in file("modules/command/interface-a
       apachePekko.clusterTyped,
       apachePekko.clusterShardingTyped,
       githubJ5ik2o.pekkoPersistenceEffector,
-      googleapis.commonProtos
+      googleapis.commonProtos,
+      sangria.sangria,
+      sangria.sangriaCirce
     ),
     Compile / pekkoGrpcGeneratedSources := Seq(PekkoGrpc.Server),
     PB.protocExecutable := file(sys.env.getOrElse("PROTOC_PATH", "/usr/bin/protoc")),
@@ -190,7 +192,7 @@ lazy val commandApi = (project in file("apps/command-api"))
   .settings(dockerSettings)
   .settings(
     name := "command-api",
-    Compile / mainClass := Some("io.github.j5ik2o.pcqrses.commandApi.MainActor"),
+    Compile / mainClass := Some("io.github.j5ik2o.pcqrses.commandApi.Main"),
     Docker / packageName := s"${basename}-command-api",
     Docker / version := "0.1.0",
     Docker / dockerExposedPorts := Seq(18080),
@@ -337,7 +339,7 @@ lazy val queryApi = (project in file("apps/query-api"))
   .settings(dockerSettings)
   .settings(
     name := "query-api",
-    Compile / mainClass := Some(s"io.github.j5ik2o.${basename}.queryApi.MainActor"),
+    Compile / mainClass := Some(s"io.github.j5ik2o.${basename}.queryApi.Main"),
     Docker / packageName := s"${basename}-query-api",
     Docker / version := "0.1.0",
     Docker / dockerExposedPorts := Seq(18082),

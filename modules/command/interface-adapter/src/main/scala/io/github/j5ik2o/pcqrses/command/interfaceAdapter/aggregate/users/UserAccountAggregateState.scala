@@ -2,7 +2,7 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users
 
 import io.github.j5ik2o.pcqrses.command.domain.users.{UserAccount, UserAccountEvent, UserAccountId}
 
-private[users] enum UserAccountAggregateState {
+enum UserAccountAggregateState {
   case NotCreated(id: UserAccountId)
   case Created(user: UserAccount)
   case Deleted(user: UserAccount) // 削除状態でも全情報を保持

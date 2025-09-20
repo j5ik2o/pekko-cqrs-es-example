@@ -1,5 +1,6 @@
 package io.github.j5ik2o.pcqrses.commandApi
 
+import io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users.UserAccountAggregateRegistry
 import io.github.j5ik2o.pcqrses.commandApi.config.{LoadBalancerConfig, ServerConfig}
 import org.apache.pekko.actor.CoordinatedShutdown
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
@@ -45,9 +46,21 @@ object MainActor {
       }
 
       // TODO: GraphQL Handler(Mutation) の初期化
+      initializeGraphQLHandler(context)
 
       Behaviors.same
     }
+
+  private def initializeGraphQLHandler(context: scaladsl.ActorContext[Command])(implicit
+    system: ActorSystem[?],
+    executionContext: ExecutionContextExecutor,
+    zioRuntime: Runtime[Any]
+  ): Unit = {
+    val mode = UserAccountAggregateRegistry.modeFromConfig(system)
+    UserAccountAggregateRegistry.create(mode)
+    // GraphQLHandlerの初期化ロジックをここに実装
+    context.log.info("GraphQL Handler initialized")
+  }
 
   private def startManagementWithGracefulShutdown(
     context: scaladsl.ActorContext[Command],

@@ -11,7 +11,7 @@ import zio.{IO, Task, ZIO}
 
 import scala.concurrent.ExecutionContext
 
-class UserAccountUseCase(userAccountAggregateRef: ActorRef[UserAccountProtocol.Command])(implicit
+final class UserAccountUseCase(userAccountAggregateRef: ActorRef[UserAccountProtocol.Command])(implicit
   timeout: Timeout,
   scheduler: Scheduler,
   ec: ExecutionContext) {
