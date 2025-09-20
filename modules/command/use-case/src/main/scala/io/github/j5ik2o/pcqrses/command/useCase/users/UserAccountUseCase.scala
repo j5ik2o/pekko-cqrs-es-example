@@ -10,18 +10,20 @@ import scala.concurrent.ExecutionContext
 
 /**
  * UserAccountユースケースのインターフェース
- * 
- * ビジネスロジックのインターフェースを定義し、
- * テストでモック化可能にする
+ *
+ * ビジネスロジックのインターフェースを定義し、 テストでモック化可能にする
  */
 trait UserAccountUseCase {
-  
+
   /**
    * ユーザーアカウントを作成する
-   * 
-   * @param userAccountName ユーザー名
-   * @param emailAddress メールアドレス
-   * @return 作成されたユーザーアカウントのID
+   *
+   * @param userAccountName
+   *   ユーザー名
+   * @param emailAddress
+   *   メールアドレス
+   * @return
+   *   作成されたユーザーアカウントのID
    */
   def createUserAccount(
     userAccountName: UserAccountName,
@@ -30,15 +32,20 @@ trait UserAccountUseCase {
 }
 
 object UserAccountUseCase {
-  
+
   /**
    * UserAccountUseCaseのインスタンスを作成する
-   * 
-   * @param userAccountAggregateRef ユーザーアカウントアグリゲートのActorRef
-   * @param timeout アクタータイムアウト
-   * @param scheduler スケジューラー
-   * @param ec 実行コンテキスト
-   * @return UserAccountUseCaseのインスタンス
+   *
+   * @param userAccountAggregateRef
+   *   ユーザーアカウントアグリゲートのActorRef
+   * @param timeout
+   *   アクタータイムアウト
+   * @param scheduler
+   *   スケジューラー
+   * @param ec
+   *   実行コンテキスト
+   * @return
+   *   UserAccountUseCaseのインスタンス
    */
   def apply(
     userAccountAggregateRef: ActorRef[UserAccountProtocol.Command]

@@ -8,8 +8,7 @@ import scala.concurrent.{ExecutionContext, Future}
 /**
  * GraphQLリゾルバー用のコンテキスト
  *
- * データベース操作の実行機能とその他の共通リソースを提供する。
- * DIコンテナを使わずにSlickのDBアクセスを抽象化する役割を持つ。
+ * データベース操作の実行機能とその他の共通リソースを提供する。 DIコンテナを使わずにSlickのDBアクセスを抽象化する役割を持つ。
  */
 final case class ResolverContext(
   private val dbRunner: DBIO[?] => Future[?],
@@ -20,8 +19,10 @@ final case class ResolverContext(
   /**
    * DBIOアクションを実行する
    *
-   * @param action 実行するDBIOアクション
-   * @return 実行結果のFuture
+   * @param action
+   *   実行するDBIOアクション
+   * @return
+   *   実行結果のFuture
    */
   def runDbAction[T](action: DBIO[T]): Future[T] =
     dbRunner(action).asInstanceOf[Future[T]]
@@ -29,8 +30,10 @@ final case class ResolverContext(
   /**
    * トランザクション内でDBIOアクションを実行する
    *
-   * @param action 実行するDBIOアクション
-   * @return 実行結果のFuture
+   * @param action
+   *   実行するDBIOアクション
+   * @return
+   *   実行結果のFuture
    */
   def runDbActionTransactionally[T](action: DBIO[T])(implicit profile: JdbcProfile): Future[T] = {
     import profile.api._
@@ -39,26 +42,33 @@ final case class ResolverContext(
 }
 
 object ResolverContext {
+
   /**
    * Slickのデータベース接続からResolverContextを生成
    *
-   * @param db Slickのデータベース接続
-   * @param ec ExecutionContext
-   * @return ResolverContextインスタンス
+   * @param db
+   *   Slickのデータベース接続
+   * @param ec
+   *   ExecutionContext
+   * @return
+   *   ResolverContextインスタンス
    */
-  def fromSlickDatabase(db: JdbcProfile#Backend#Database)(implicit ec: ExecutionContext): ResolverContext = {
+  def fromSlickDatabase(db: JdbcProfile#Backend#Database)(implicit
+    ec: ExecutionContext): ResolverContext =
     ResolverContext(
       dbRunner = action => db.run(action.asInstanceOf[DBIO[Any]]),
       executionContext = ec
     )
-  }
 
   /**
    * テスト用のモックコンテキストを作成
    *
-   * @param mockRunner モック用のDBランナー関数
-   * @param ec ExecutionContext
-   * @return ResolverContextインスタンス
+   * @param mockRunner
+   *   モック用のDBランナー関数
+   * @param ec
+   *   ExecutionContext
+   * @return
+   *   ResolverContextインスタンス
    */
   def forTesting(mockRunner: DBIO[?] => Future[?])(implicit ec: ExecutionContext): ResolverContext =
     ResolverContext(mockRunner, ec)

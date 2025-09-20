@@ -5,14 +5,14 @@ import io.github.j5ik2o.pcqrses.command.useCase.users.UserAccountUseCase
 import io.github.j5ik2o.pcqrses.commandApi.config.{LoadBalancerConfig, ServerConfig}
 import org.apache.pekko.actor.CoordinatedShutdown
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import org.apache.pekko.actor.typed.{ActorSystem, Behavior, Scheduler, scaladsl}
+import org.apache.pekko.actor.typed.{scaladsl, ActorSystem, Behavior, Scheduler}
 import org.apache.pekko.cluster.typed.Cluster
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.management.cluster.bootstrap.ClusterBootstrap
 import org.apache.pekko.management.scaladsl.PekkoManagement
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, pattern}
+import org.apache.pekko.{pattern, Done}
 import zio.*
 
 import scala.concurrent.duration.*
@@ -60,7 +60,7 @@ object MainActor {
     val serverConfig = ServerConfig.from(system.settings.config.getConfig("pcqrses.command-api"))
     implicit val timeout: Timeout = Timeout(serverConfig.actorTimeout)
     implicit val scheduler: Scheduler = system.scheduler
-    
+
     val mode = UserAccountAggregateRegistry.modeFromConfig(system)
     val b = UserAccountAggregateRegistry.create(mode)
     val ref = context.spawn(b, "UserAccountAggregateRegistry")

@@ -12,12 +12,11 @@ final case class ServerConfig(
 )
 
 object ServerConfig {
-  def from(config: Config): ServerConfig = {
+  def from(config: Config): ServerConfig =
     ServerConfig(
       host = config.getString("server.host"),
       port = config.getInt("server.port"),
       actorTimeout = config.getDuration("actor-timeout").toScala,
       shutdownTimeout = config.getDuration("server.shutdown-timeout").toScala
     )
-  }
 }

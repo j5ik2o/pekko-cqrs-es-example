@@ -7,16 +7,19 @@ import scala.concurrent.{ExecutionContext, Future}
 
 /**
  * GraphQLリゾルバー用のコンテキスト
- * 
- * @param userAccountUseCase ユーザーアカウントのユースケース
- * @param zioRuntime ZIOランタイム
- * @param ec ExecutionContext
+ *
+ * @param userAccountUseCase
+ *   ユーザーアカウントのユースケース
+ * @param zioRuntime
+ *   ZIOランタイム
+ * @param ec
+ *   ExecutionContext
  */
 case class ResolverContext(
   userAccountUseCase: UserAccountUseCase,
   zioRuntime: Runtime[Any]
 )(implicit ec: ExecutionContext) {
-  
+
   /**
    * ZIO Taskを実行してFutureに変換
    */

@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext
 
 /**
  * UserAccountUseCaseの実装クラス
- * 
+ *
  * Pekkoアクターを使用して実際のビジネスロジックを実行する
  */
 private[users] final class UserAccountUseCaseImpl(
@@ -23,7 +23,7 @@ private[users] final class UserAccountUseCaseImpl(
   scheduler: Scheduler,
   ec: ExecutionContext
 ) extends UserAccountUseCase {
-  
+
   private val logger = LoggerFactory.getLogger(this.getClass)
 
   override def createUserAccount(
@@ -46,8 +46,7 @@ private[users] final class UserAccountUseCaseImpl(
         UserAccountUseCaseError.UnexpectedError(
           s"Failed to communicate with actor: ${e.getMessage}",
           Some(e)
-        )
-      )
+        ))
       result <- reply match {
         case UserAccountProtocol.CreateSucceeded(id) =>
           ZIO.succeed(logger.info(s"UserAccount creation succeeded for ID: ${id.asString}")) *>

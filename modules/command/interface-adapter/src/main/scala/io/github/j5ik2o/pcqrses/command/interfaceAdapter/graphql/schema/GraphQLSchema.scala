@@ -1,15 +1,19 @@
 package io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.schema
 
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.ResolverContext
-import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.resolvers.{MutationResolver, QueryResolver}
+import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.resolvers.{
+  MutationResolver,
+  QueryResolver
+}
 import sangria.schema.Schema
 
-class GraphQLSchema extends TypeDefinitions
-  with QueryResolver with MutationResolver {
+class GraphQLSchema extends TypeDefinitions with QueryResolver with MutationResolver {
+
   /**
    * GraphQLスキーマを生成
    *
-   * @return 完全なGraphQLスキーマ
+   * @return
+   *   完全なGraphQLスキーマ
    */
   def schema: Schema[ResolverContext, Unit] = Schema(
     query = QueryType,
@@ -19,10 +23,12 @@ class GraphQLSchema extends TypeDefinitions
 }
 
 object GraphQLSchema {
+
   /**
    * GraphQLスキーマインスタンスを生成
    *
-   * @return GraphQLSchemaインスタンス
+   * @return
+   *   GraphQLSchemaインスタンス
    */
   def apply(): GraphQLSchema = new GraphQLSchema()
 }

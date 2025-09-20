@@ -52,7 +52,7 @@ class GraphQLRoutes(graphQLService: GraphQLService)(implicit ec: ExecutionContex
     |</html>
   """.stripMargin
 
-  val routes: Route = {
+  val routes: Route =
     concat(
       path("graphql") {
         concat(
@@ -60,33 +60,37 @@ class GraphQLRoutes(graphQLService: GraphQLService)(implicit ec: ExecutionContex
           post {
             entity(as[GraphQLRequest]) { request =>
               complete {
-                graphQLService.executeQuery(
-                  query = request.query,
-                  operationName = request.operationName,
-                  variables = request.variables
-                ).map { result =>
-                  StatusCodes.OK -> result
-                }.recover {
-                  case ex: Exception =>
+                graphQLService
+                  .executeQuery(
+                    query = request.query,
+                    operationName = request.operationName,
+                    variables = request.variables
+                  )
+                  .map { result =>
+                    StatusCodes.OK -> result
+                  }
+                  .recover { case ex: Exception =>
                     StatusCodes.InternalServerError -> Json.obj(
                       "errors" -> Json.arr(
                         Json.obj("message" -> Json.fromString(ex.getMessage))
                       )
                     )
-                }
+                  }
               }
             }
           },
           // GraphQL Playgroundを表示
           get {
-            complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, playgroundHtml)))
+            complete(
+              HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, playgroundHtml)))
           }
         )
       },
       // GraphQL Playgroundの別エンドポイント
       path("playground") {
         get {
-          complete(HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, playgroundHtml)))
+          complete(
+            HttpResponse(entity = HttpEntity(ContentTypes.`text/html(UTF-8)`, playgroundHtml)))
         }
       },
       // GraphQL introspection専用エンドポイント
@@ -106,5 +110,4 @@ class GraphQLRoutes(graphQLService: GraphQLService)(implicit ec: ExecutionContex
         }
       }
     )
-  }
 }

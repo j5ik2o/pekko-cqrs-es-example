@@ -31,7 +31,8 @@ object MainActor {
     val config = system.settings.config
     val serverConfig = ServerConfig.from(config)
 
-    context.log.info(s"Initializing Query API server with config: host=${serverConfig.host}, port=${serverConfig.port}")
+    context.log.info(
+      s"Initializing Query API server with config: host=${serverConfig.host}, port=${serverConfig.port}")
 
     // データベース接続の初期化
     val dbConfig = config.getConfig("pcqrses.database")
@@ -64,7 +65,8 @@ object MainActor {
 
         // グレースフルシャットダウンの設定
         CoordinatedShutdown(system).addTask(
-          CoordinatedShutdown.PhaseServiceUnbind, "http-server-unbind"
+          CoordinatedShutdown.PhaseServiceUnbind,
+          "http-server-unbind"
         ) { () =>
           serverBinding.flatMap(_.unbind()).map(_ => org.apache.pekko.Done)
         }
@@ -87,6 +89,3 @@ object MainActor {
   }
 
 }
-
-
-

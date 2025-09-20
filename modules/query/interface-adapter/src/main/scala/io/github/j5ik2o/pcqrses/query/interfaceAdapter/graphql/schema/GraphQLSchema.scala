@@ -13,13 +13,14 @@ import slick.jdbc.JdbcProfile
  */
 class GraphQLSchema(override val profile: JdbcProfile)
   extends UserAccountsComponent
-    with TypeDefinitions
-    with QueryResolver {
+  with TypeDefinitions
+  with QueryResolver {
 
   /**
    * GraphQLスキーマを生成
    *
-   * @return 完全なGraphQLスキーマ
+   * @return
+   *   完全なGraphQLスキーマ
    */
   def schema: Schema[ResolverContext, Unit] = Schema(
     query = QueryType,
@@ -29,11 +30,14 @@ class GraphQLSchema(override val profile: JdbcProfile)
 }
 
 object GraphQLSchema {
+
   /**
    * GraphQLスキーマインスタンスを生成
    *
-   * @param profile JdbcProfile (例: PostgresProfile)
-   * @return GraphQLSchemaインスタンス
+   * @param profile
+   *   JdbcProfile (例: PostgresProfile)
+   * @return
+   *   GraphQLSchemaインスタンス
    */
   def apply(profile: JdbcProfile): GraphQLSchema =
     new GraphQLSchema(profile)

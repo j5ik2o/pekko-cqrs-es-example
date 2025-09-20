@@ -9,7 +9,7 @@ import java.time.Instant
  * GraphQL型定義
  */
 trait TypeDefinitions extends ScalarTypes {
-  
+
   /**
    * UserAccount型
    */
@@ -24,18 +24,22 @@ trait TypeDefinitions extends ScalarTypes {
       Field("updatedAt", OptionType(DateTimeType), resolve = _.value.updatedAt)
     )
   )
-  
+
   /**
    * CreateUserAccountInput引数（直接InputFieldsを定義）
    */
   val CreateUserAccountInputArg: Argument[CreateUserAccountInput] = {
     import sangria.marshalling.circe.*
     import io.circe.generic.semiauto.*
-    
-    implicit val createUserAccountInputDecoder: io.circe.Decoder[CreateUserAccountInput] = deriveDecoder[CreateUserAccountInput]
-    implicit val createUserAccountInputEncoder: io.circe.Encoder[CreateUserAccountInput] = deriveEncoder[CreateUserAccountInput]
-    implicit val createUserAccountInputFromInput: sangria.marshalling.FromInput[CreateUserAccountInput] = circeDecoderFromInput[CreateUserAccountInput]
-    
+
+    implicit val createUserAccountInputDecoder: io.circe.Decoder[CreateUserAccountInput] =
+      deriveDecoder[CreateUserAccountInput]
+    implicit val createUserAccountInputEncoder: io.circe.Encoder[CreateUserAccountInput] =
+      deriveEncoder[CreateUserAccountInput]
+    implicit val createUserAccountInputFromInput
+      : sangria.marshalling.FromInput[CreateUserAccountInput] =
+      circeDecoderFromInput[CreateUserAccountInput]
+
     Argument(
       "input",
       InputObjectType[CreateUserAccountInput](

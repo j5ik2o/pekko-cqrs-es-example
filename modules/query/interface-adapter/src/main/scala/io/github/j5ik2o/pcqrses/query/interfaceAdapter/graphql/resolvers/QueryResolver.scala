@@ -25,10 +25,12 @@ trait QueryResolver extends TypeDefinitions {
             case Left(errors) =>
               scala.concurrent.Future.failed(ValidationError(errors.toList))
             case Right(validId) =>
-              ctx.ctx.runDbAction(UserAccountsDao.findById(validId))
-                .recover {
-                  case ex: Exception =>
-                    throw QueryError(s"Failed to fetch user account: ${ex.getMessage}", Some("FETCH_USER_FAILED"))
+              ctx.ctx
+                .runDbAction(UserAccountsDao.findById(validId))
+                .recover { case ex: Exception =>
+                  throw QueryError(
+                    s"Failed to fetch user account: ${ex.getMessage}",
+                    Some("FETCH_USER_FAILED"))
                 }(ctx.ctx.ec)
           }
         }
@@ -37,9 +39,7 @@ trait QueryResolver extends TypeDefinitions {
         "getUserAccounts",
         ListType(UserAccountType),
         description = Some("Get all user accounts"),
-        resolve = ctx => {
-          ctx.ctx.runDbAction(UserAccountsDao.findAll())
-        }
+        resolve = ctx => ctx.ctx.runDbAction(UserAccountsDao.findAll())
       ),
       Field(
         "getUserAccountsByIds",
@@ -52,10 +52,12 @@ trait QueryResolver extends TypeDefinitions {
             case Left(errors) =>
               scala.concurrent.Future.failed(ValidationError(errors.toList))
             case Right(validIds) =>
-              ctx.ctx.runDbAction(UserAccountsDao.findByIds(validIds))
-                .recover {
-                  case ex: Exception =>
-                    throw QueryError(s"Failed to fetch user accounts: ${ex.getMessage}", Some("FETCH_USERS_FAILED"))
+              ctx.ctx
+                .runDbAction(UserAccountsDao.findByIds(validIds))
+                .recover { case ex: Exception =>
+                  throw QueryError(
+                    s"Failed to fetch user accounts: ${ex.getMessage}",
+                    Some("FETCH_USERS_FAILED"))
                 }(ctx.ctx.ec)
           }
         }
@@ -71,16 +73,20 @@ trait QueryResolver extends TypeDefinitions {
             case Left(errors) =>
               scala.concurrent.Future.failed(ValidationError(errors.toList))
             case Right(validSearchTerm) =>
-              ctx.ctx.runDbAction {
-                import profile.api._
-                UserAccountsDao
-                  .filter(u => u.firstName.toLowerCase.like(s"%${validSearchTerm.toLowerCase}%") ||
-                               u.lastName.toLowerCase.like(s"%${validSearchTerm.toLowerCase}%"))
-                  .result
-              }.recover {
-                case ex: Exception =>
-                  throw QueryError(s"Failed to search user accounts: ${ex.getMessage}", Some("SEARCH_USERS_FAILED"))
-              }(ctx.ctx.ec)
+              ctx.ctx
+                .runDbAction {
+                  import profile.api._
+                  UserAccountsDao
+                    .filter(u =>
+                      u.firstName.toLowerCase.like(s"%${validSearchTerm.toLowerCase}%") ||
+                        u.lastName.toLowerCase.like(s"%${validSearchTerm.toLowerCase}%"))
+                    .result
+                }
+                .recover { case ex: Exception =>
+                  throw QueryError(
+                    s"Failed to search user accounts: ${ex.getMessage}",
+                    Some("SEARCH_USERS_FAILED"))
+                }(ctx.ctx.ec)
           }
         }
       )

@@ -78,29 +78,31 @@ class GraphQLSchemaSpec extends AsyncWordSpec with Matchers {
         }
       """
 
-      Executor.execute(
-        schema = schema.schema,
-        queryAst = sangria.parser.QueryParser.parse(introspectionQuery).get,
-        userContext = context
-      ).map { result =>
-        val json = result.asInstanceOf[Json]
-        val types = json.hcursor
-          .downField("data")
-          .downField("__schema")
-          .downField("types")
-          .as[List[Json]]
+      Executor
+        .execute(
+          schema = schema.schema,
+          queryAst = sangria.parser.QueryParser.parse(introspectionQuery).get,
+          userContext = context
+        )
+        .map { result =>
+          val json = result.asInstanceOf[Json]
+          val types = json.hcursor
+            .downField("data")
+            .downField("__schema")
+            .downField("types")
+            .as[List[Json]]
 
-        types match {
-          case Right(typeList) =>
-            val typeNames = typeList.flatMap(_.hcursor.get[String]("name").toOption)
-            typeNames should contain("UserAccount")
-            typeNames should contain("Query")
-            typeNames should contain("String")
-            typeNames should contain("DateTime")
-          case Left(err) =>
-            fail(s"Failed to parse introspection response: $err")
+          types match {
+            case Right(typeList) =>
+              val typeNames = typeList.flatMap(_.hcursor.get[String]("name").toOption)
+              typeNames should contain("UserAccount")
+              typeNames should contain("Query")
+              typeNames should contain("String")
+              typeNames should contain("DateTime")
+            case Left(err) =>
+              fail(s"Failed to parse introspection response: $err")
+          }
         }
-      }
     }
   }
 }

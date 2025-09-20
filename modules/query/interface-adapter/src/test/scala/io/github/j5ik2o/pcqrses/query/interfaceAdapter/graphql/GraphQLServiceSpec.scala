@@ -2,7 +2,6 @@ package io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AsyncWordSpec
-import io.circe.Json
 
 import scala.concurrent.ExecutionContext
 

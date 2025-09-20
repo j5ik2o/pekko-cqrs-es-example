@@ -13,7 +13,7 @@ case object DateTimeCoercionViolation extends ValueCoercionViolation("Date value
  * GraphQLのスカラー型定義
  */
 trait ScalarTypes {
-  
+
   /**
    * ISO 8601形式のDateTime型
    */
