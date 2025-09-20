@@ -13,19 +13,17 @@ object CreateUserAccountInputValidator {
   type ErrorInfo = String
 
   def validate(
-    input: CreateUserAccountInput): Validation[ErrorInfo, (UserAccountName, EmailAddress)] = {
-    val nameParts = input.name.trim.split("\\s+", 2)
-
+    input: CreateUserAccountInput): Validation[ErrorInfo, (UserAccountName, EmailAddress)] =
     Validation.validateWith(
       Validation.fromEither(
         FirstName
-          .parseFromString(nameParts.headOption.getOrElse(""))
+          .parseFromString(input.firstName)
           .left
           .map(e => s"Invalid first name: ${e.message}")
       ),
       Validation.fromEither(
         LastName
-          .parseFromString(nameParts.lift(1).getOrElse(""))
+          .parseFromString(input.lastName)
           .left
           .map(e => s"Invalid last name: ${e.message}")
       ),
@@ -36,5 +34,4 @@ object CreateUserAccountInputValidator {
           .map(e => s"Invalid email: ${e.message}")
       )
     )((firstName, lastName, emailAddress) => (UserAccountName(firstName, lastName), emailAddress))
-  }
 }

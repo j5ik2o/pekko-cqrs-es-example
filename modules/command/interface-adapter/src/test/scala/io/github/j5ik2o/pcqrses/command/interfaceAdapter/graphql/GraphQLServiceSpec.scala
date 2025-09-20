@@ -13,7 +13,8 @@ class GraphQLServiceSpec extends AsyncWordSpec with Matchers {
       val invalidMutation = """
         mutation {
           createUserAccount(input: {
-            name: "Test User"
+            firstName: "Test"
+            lastName: "User"
             emailAddress: "test@example.com"
             // 不正な構文
           }) {
@@ -33,12 +34,11 @@ class GraphQLServiceSpec extends AsyncWordSpec with Matchers {
       val validMutation = """
         mutation {
           createUserAccount(input: {
-            name: "Test User"
+            firstName: "Test"
+            lastName: "User"
             emailAddress: "test@example.com"
           }) {
             id
-            name
-            emailAddress
           }
         }
       """
@@ -54,8 +54,6 @@ class GraphQLServiceSpec extends AsyncWordSpec with Matchers {
         mutation($input: CreateUserAccountInput!) {
           createUserAccount(input: $input) {
             id
-            name
-            emailAddress
           }
         }
       """

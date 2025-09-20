@@ -41,7 +41,8 @@ trait TypeDefinitions extends ScalarTypes {
         "CreateUserAccountInput",
         "Input for creating a user account",
         List(
-          InputField("name", StringType),
+          InputField("firstName", StringType),
+          InputField("lastName", StringType),
           InputField("emailAddress", StringType)
         )
       )
@@ -60,6 +61,7 @@ case class CreateUserAccountResult(
  * CreateUserAccount入力型
  */
 case class CreateUserAccountInput(
-  name: String,
+  firstName: String,
+  lastName: String,
   emailAddress: String
 )
