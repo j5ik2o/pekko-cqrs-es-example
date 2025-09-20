@@ -2,7 +2,9 @@ package io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.resolvers
 
 import io.github.j5ik2o.pcqrses.query.interfaceAdapter.dao.UserAccountsComponent
 import io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.ResolverContext
+import io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.errors.{QueryError, ValidationError}
 import io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.schema.TypeDefinitions
+import io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.validators.QueryInputValidator
 import sangria.schema.*
 
 trait QueryResolver extends TypeDefinitions {
@@ -19,7 +21,16 @@ trait QueryResolver extends TypeDefinitions {
         arguments = UserAccountIdArg :: Nil,
         resolve = ctx => {
           val id = ctx.arg(UserAccountIdArg)
-          ctx.ctx.runDbAction(UserAccountsDao.findById(id))
+          QueryInputValidator.validateUserAccountId(id).toEither match {
+            case Left(errors) =>
+              scala.concurrent.Future.failed(ValidationError(errors.toList))
+            case Right(validId) =>
+              ctx.ctx.runDbAction(UserAccountsDao.findById(validId))
+                .recover {
+                  case ex: Exception =>
+                    throw QueryError(s"Failed to fetch user account: ${ex.getMessage}", Some("FETCH_USER_FAILED"))
+                }(ctx.ctx.ec)
+          }
         }
       ),
       Field(
@@ -37,7 +48,16 @@ trait QueryResolver extends TypeDefinitions {
         arguments = UserAccountIdsArg :: Nil,
         resolve = ctx => {
           val ids = ctx.arg(UserAccountIdsArg).asInstanceOf[Seq[String]]
-          ctx.ctx.runDbAction(UserAccountsDao.findByIds(ids))
+          QueryInputValidator.validateUserAccountIds(ids).toEither match {
+            case Left(errors) =>
+              scala.concurrent.Future.failed(ValidationError(errors.toList))
+            case Right(validIds) =>
+              ctx.ctx.runDbAction(UserAccountsDao.findByIds(validIds))
+                .recover {
+                  case ex: Exception =>
+                    throw QueryError(s"Failed to fetch user accounts: ${ex.getMessage}", Some("FETCH_USERS_FAILED"))
+                }(ctx.ctx.ec)
+          }
         }
       ),
       Field(
@@ -47,12 +67,20 @@ trait QueryResolver extends TypeDefinitions {
         arguments = Argument("searchTerm", StringType, description = "Search term for name") :: Nil,
         resolve = ctx => {
           val searchTerm = ctx.arg[String]("searchTerm")
-          ctx.ctx.runDbAction {
-            import profile.api._
-            UserAccountsDao
-              .filter(u => u.firstName.toLowerCase.like(s"%${searchTerm.toLowerCase}%") ||
-                           u.lastName.toLowerCase.like(s"%${searchTerm.toLowerCase}%"))
-              .result
+          QueryInputValidator.validateSearchTerm(searchTerm).toEither match {
+            case Left(errors) =>
+              scala.concurrent.Future.failed(ValidationError(errors.toList))
+            case Right(validSearchTerm) =>
+              ctx.ctx.runDbAction {
+                import profile.api._
+                UserAccountsDao
+                  .filter(u => u.firstName.toLowerCase.like(s"%${validSearchTerm.toLowerCase}%") ||
+                               u.lastName.toLowerCase.like(s"%${validSearchTerm.toLowerCase}%"))
+                  .result
+              }.recover {
+                case ex: Exception =>
+                  throw QueryError(s"Failed to search user accounts: ${ex.getMessage}", Some("SEARCH_USERS_FAILED"))
+              }(ctx.ctx.ec)
           }
         }
       )

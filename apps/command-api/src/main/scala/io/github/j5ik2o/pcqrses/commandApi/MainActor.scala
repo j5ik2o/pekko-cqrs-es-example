@@ -1,6 +1,7 @@
 package io.github.j5ik2o.pcqrses.commandApi
 
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users.UserAccountAggregateRegistry
+import io.github.j5ik2o.pcqrses.command.useCase.users.UserAccountUseCase
 import io.github.j5ik2o.pcqrses.commandApi.config.{LoadBalancerConfig, ServerConfig}
 import org.apache.pekko.actor.CoordinatedShutdown
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
@@ -56,8 +57,14 @@ object MainActor {
     executionContext: ExecutionContextExecutor,
     zioRuntime: Runtime[Any]
   ): Unit = {
+    val serverConfig = ServerConfig.from(system.settings.config.getConfig("pcqrses.command-api"))
+    implicit val timeout: Timeout = Timeout(serverConfig.actorTimeout)
+    implicit val scheduler: Scheduler = system.scheduler
+    
     val mode = UserAccountAggregateRegistry.modeFromConfig(system)
-    UserAccountAggregateRegistry.create(mode)
+    val b = UserAccountAggregateRegistry.create(mode)
+    val ref = context.spawn(b, "UserAccountAggregateRegistry")
+    val h = new UserAccountUseCase(ref)
     // GraphQLHandlerの初期化ロジックをここに実装
     context.log.info("GraphQL Handler initialized")
   }

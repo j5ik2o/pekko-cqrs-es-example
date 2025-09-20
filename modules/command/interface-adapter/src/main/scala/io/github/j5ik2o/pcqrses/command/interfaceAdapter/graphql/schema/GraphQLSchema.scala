@@ -17,3 +17,12 @@ class GraphQLSchema extends TypeDefinitions
     subscription = None // 将来的にSubscriptionResolverを追加
   )
 }
+
+object GraphQLSchema {
+  /**
+   * GraphQLスキーマインスタンスを生成
+   *
+   * @return GraphQLSchemaインスタンス
+   */
+  def apply(): GraphQLSchema = new GraphQLSchema()
+}

@@ -236,7 +236,8 @@ lazy val queryInterfaceAdapter = (project in file("modules/query/interface-adapt
       pekkoHttpCirce.pekkoHttpCirce,
       slick.slick,
       slick.hikariCP,
-      postgresql.postgresql
+      postgresql.postgresql,
+      zio.prelude
     ),
     generator / tableNameFilter := { tableName =>
       tableName.toUpperCase != "SCHEMA_VERSION" && tableName.toUpperCase != "FLYWAY_SCHEMA_HISTORY"

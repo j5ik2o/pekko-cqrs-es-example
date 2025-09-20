@@ -1,5 +1,6 @@
 package io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql
 
+import io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.errors.GraphQLErrorHandler
 import io.github.j5ik2o.pcqrses.query.interfaceAdapter.graphql.schema.GraphQLSchema
 import sangria.execution.{ErrorWithResolver, Executor, QueryReducer}
 import sangria.marshalling.circe.*
@@ -57,7 +58,8 @@ class GraphQLService(
             QueryReducer.rejectMaxDepth(maxDepth),
             QueryReducer.rejectComplexQueries(1000.0, (complexity: Double, _: Any) =>
               new Exception(s"Query too complex: $complexity"))
-          )
+          ),
+          exceptionHandler = GraphQLErrorHandler.exceptionHandler
         ).recover {
           case error: ErrorWithResolver =>
             Json.obj("errors" -> Json.arr(Json.obj("message" -> Json.fromString(error.getMessage))))
