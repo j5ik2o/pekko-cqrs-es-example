@@ -199,7 +199,11 @@ lazy val commandApi = (project in file("apps/command-api"))
     Docker / dockerExposedPorts := Seq(18080),
     dockerBaseImage := "eclipse-temurin:17-jre-focal",
     libraryDependencies ++= Seq(
-      zio.core
+      zio.core,
+      pekkoHttpCirce.pekkoHttpCirce,
+      circe.core,
+      circe.generic,
+      circe.parser
     )
   )
   .settings(
