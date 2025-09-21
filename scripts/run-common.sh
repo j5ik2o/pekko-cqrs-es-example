@@ -115,8 +115,8 @@ run_db_only_mode() {
         echo ""
         show_manual_start_instructions
 
-        # Lambda自動デプロイ
-        deploy_lambda_if_enabled
+        # Lambda自動デプロイ（--db-onlyモードではスキップ）
+        # deploy_lambda_if_enabled
 
         echo ""
         echo "🛑 To stop databases: $0 down"
@@ -230,7 +230,7 @@ show_db_only_access_points() {
 check_query_api() {
     echo ""
     echo "📊 Checking Query API status..."
-    if ! wait_for_http "Query API" "http://localhost:${DOCKER_QUERY_API_PORT}/health" "Healthy" 120; then
+    if ! wait_for_http "Query API" "http://localhost:${DOCKER_QUERY_API_PORT}/api/health" "healthy" 120; then
         echo "❌ Query API failed to start within 120 seconds"
         echo "📜 Showing recent logs:"
         docker compose $1 logs --tail=50 query-api
@@ -252,9 +252,9 @@ check_dynamodb_admin() {
 # ========================================
 show_common_access_points() {
     echo "📍 Other services:"
-    echo "  - Query API: http://localhost:${DOCKER_QUERY_API_PORT}"
-    echo "  - Query Health Check: http://localhost:${DOCKER_QUERY_API_PORT}/health"
-    echo "  - GraphQL IDE (GraphiQL): http://localhost:${DOCKER_QUERY_API_PORT}/graphql"
+    echo "  - Query GraphQL API: http://localhost:${DOCKER_QUERY_API_PORT}/api/graphql"
+    echo "  - Query Health Check: http://localhost:${DOCKER_QUERY_API_PORT}/api/health"
+    echo "  - Query GraphQL Playground: http://localhost:${DOCKER_QUERY_API_PORT}/api/graphql (ブラウザで開く)"
     echo "  - DynamoDB Admin: http://localhost:${DOCKER_DYNAMODB_ADMIN_PORT}"
     echo "  - pgAdmin: http://localhost:${DOCKER_PGADMIN_PORT}"
     echo "  - PostgreSQL: localhost:${DOCKER_POSTGRES_PORT}"

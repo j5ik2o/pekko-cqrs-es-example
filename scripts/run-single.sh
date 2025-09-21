@@ -75,7 +75,7 @@ start_single_node_services() {
 
         # Command API の状態確認
         echo "📊 Checking services status..."
-        if ! wait_for_http "Command API" "http://localhost:${DOCKER_COMMAND_API_PORT}/health" "Healthy" 120; then
+        if ! wait_for_http "Command API" "http://localhost:${DOCKER_COMMAND_API_PORT}/api/health" "healthy" 120; then
             echo "❌ Command API failed to start within 120 seconds"
             echo "📜 Showing recent logs:"
             docker compose -f docker-compose-common.yml -f docker-compose-local.yml logs --tail=50 command-api
@@ -92,8 +92,9 @@ start_single_node_services() {
 
         # アクセスポイント表示
         echo "📍 Access points:"
-        echo "  - Command API: http://localhost:${DOCKER_COMMAND_API_PORT}"
-        echo "  - Command Health Check: http://localhost:${DOCKER_COMMAND_API_PORT}/health"
+        echo "  - Command GraphQL API: http://localhost:${DOCKER_COMMAND_API_PORT}/api/graphql"
+        echo "  - Command Health Check: http://localhost:${DOCKER_COMMAND_API_PORT}/api/health"
+        echo "  - Command GraphQL Playground: http://localhost:${DOCKER_COMMAND_API_PORT}/api/graphql (ブラウザで開く)"
         show_common_access_points
     fi
 }

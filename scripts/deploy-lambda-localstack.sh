@@ -54,7 +54,7 @@ export PAGER=cat
 sbt --batch "project readModelUpdater" assembly
 
 # Assembly JARのパス
-ASSEMBLY_JAR_PATH="apps/${PROJECT_NAME}/target/${SCALA_VERSION}/${PROJECT_NAME}-lambda.jar"
+ASSEMBLY_JAR_PATH="apps/${PROJECT_NAME}/target/scala-${SCALA_VERSION}/${PROJECT_NAME}-lambda.jar"
 
 # Assembly JARが存在することを確認
 if [ ! -f "$ASSEMBLY_JAR_PATH" ]; then
