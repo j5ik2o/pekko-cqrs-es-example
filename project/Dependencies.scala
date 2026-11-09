@@ -11,6 +11,11 @@ object Version {
   val slf4jVersion = "1.7.36"
 
   val managementVersion = "1.1.1" // Pekko Management最新安定版
+
+  // 未リリースのライブラリをローカルで試す場合は
+  // -Dpekko.persistence.dynamodb.version=<version> で上書きできる。
+  val pekkoPersistenceDynamoDB =
+    sys.props.getOrElse("pekko.persistence.dynamodb.version", "1.1.0")
 }
 
 object Dependencies {
@@ -86,9 +91,9 @@ object Dependencies {
 
   object githubJ5ik2o {
     val pekkoPersistenceDynamoDBJournal =
-      "io.github.j5ik2o" %% s"pekko-persistence-dynamodb-journal-v2" % "1.0.57"
+      "io.github.j5ik2o" %% s"pekko-persistence-dynamodb-journal-v2" % Version.pekkoPersistenceDynamoDB
     val pekkoPersistenceDynamoDBSnapshot =
-      "io.github.j5ik2o" %% s"pekko-persistence-dynamodb-snapshot-v2" % "1.0.57"
+      "io.github.j5ik2o" %% s"pekko-persistence-dynamodb-snapshot-v2" % Version.pekkoPersistenceDynamoDB
     val pekkoPersistenceEffector = "io.github.j5ik2o" %% "pekko-persistence-effector" % "0.8.11"
   }
 

@@ -20,7 +20,7 @@ x-cluster-env: &cluster-env
   COMMAND_API_HEALTH_CHECK_GRACE_PERIOD: "10s"
 
 x-command-api-base: &command-api-base
-  image: p-cqrs-es-command-api:0.1.0
+  image: pcqrses-command-api:0.1.0
   networks:
     - p-cqrs-es-network
   environment:

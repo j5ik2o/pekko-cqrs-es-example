@@ -77,7 +77,7 @@ modules/
 apps/
 ├── command-api/            # コマンド側HTTP/gRPCサーバー
 ├── query-api/             # クエリ側GraphQLサーバー
-└── read-model-updater/    # イベントプロセッサ（イベントから読み取りモデルを更新）
+└── read-model-updater/    # イベントプロセッサ（JournalHead ストリームから読み取りモデルを更新）
 ```
 
 ### 主要アーキテクチャパターン
@@ -85,7 +85,7 @@ apps/
 1. **イベントソーシング**: Pekko Persistenceを使用して全ての状態変更をイベントとして記録
 2. **CQRS**: 書き込み（コマンド）と読み取り（クエリ）のモデルを分離
 3. **アクターモデル**: コマンド処理にPekko型付きアクターを使用
-4. **イベント駆動**: イベント処理により読み取りモデルを非同期に更新
+4. **イベント駆動**: `JournalHead` の DynamoDB Streams を Lambda が消費し、集約単位の順序を保って読み取りモデルを非同期に更新する。適用済みシーケンス番号は `read_model_checkpoints` に保存し、Read Model 更新と同一トランザクションで更新する
 5. **Protobuf**: イベント/スナップショットのシリアライゼーションに使用
 6. **GraphQL**: Sangria GraphQLでクエリAPIを公開
 

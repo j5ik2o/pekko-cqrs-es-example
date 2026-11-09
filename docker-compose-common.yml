@@ -157,7 +157,7 @@ services:
 
   # Query API (Read側API) - 単一ノード
   query-api:
-    image: p-cqrs-es-query-api:0.1.0
+    image: pcqrses-query-api:0.1.0
     ports:
       - "${DOCKER_QUERY_API_PORT:-50502}:18082"
     depends_on:

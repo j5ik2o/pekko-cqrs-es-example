@@ -26,7 +26,8 @@ export PROJECT_NAME=read-model-updater
 FUNCTION_NAME="pcqrses-read-model-updater"
 
 # DynamoDB テーブル名とストリームARN
-TABLE_NAME="Journal"
+# RMU は Journal ではなく JournalHead のストリームを消費する
+TABLE_NAME="JournalHead"
 
 # アーキテクチャの自動検出
 if [ "$(uname -m)" = "arm64" ] || [ "$(uname -m)" = "aarch64" ]; then
@@ -280,13 +281,18 @@ fi
 
 # 新しいイベントソースマッピングを作成（LambdaがActiveであることを前提）
 echo "📝 新しいイベントソースマッピングを作成中..."
+# 同じ JournalHead アイテムのレコードはストリーム上で順序保証される。
+# ParallelizationFactor=1 にして、1 シャードを同時に複数 Lambda で処理しないようにする。
+# 失敗したレコードだけを再試行できるよう ReportBatchItemFailures を有効にする。
 aws lambda create-event-source-mapping \
     --endpoint-url $ENDPOINT_URL \
     --function-name $FUNCTION_NAME \
     --event-source-arn $STREAM_ARN \
-    --starting-position LATEST \
+    --starting-position TRIM_HORIZON \
     --batch-size 10 \
-    --maximum-batching-window-in-seconds 5
+    --maximum-batching-window-in-seconds 5 \
+    --parallelization-factor 1 \
+    --function-response-types ReportBatchItemFailures
 
 # Assembly JARはそのまま残す（デバッグ用に保持）
 echo "🧹 デプロイメント完了"

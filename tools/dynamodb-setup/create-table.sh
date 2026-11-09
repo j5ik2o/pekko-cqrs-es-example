@@ -7,7 +7,7 @@ pwd
 ls -la
 
 # 定数定義
-readonly TABLES=("journal" "snapshot" "state")
+readonly TABLES=("journal-head" "journal" "snapshot" "state")
 readonly DEFAULT_ENDPOINT="http://localhost:8000"
 
 # 使用方法の表示

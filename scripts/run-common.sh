@@ -220,7 +220,7 @@ show_db_only_access_points() {
     echo ""
     echo "🔄 Read Model Updater (Lambda):"
     echo "  - Function: pcqrses-read-model-updater"
-    echo "  - Trigger: DynamoDB Streams (automatic)"
+    echo "  - Trigger: JournalHead DynamoDB Stream (automatic)"
     echo "  - Check status: aws lambda get-function --endpoint-url http://localhost:${DOCKER_LOCALSTACK_PORT} --function-name pcqrses-read-model-updater"
 }
 
@@ -262,7 +262,7 @@ show_common_access_points() {
     echo ""
     echo "🔄 Read Model Updater (Lambda):"
     echo "  - Function: pcqrses-read-model-updater"
-    echo "  - Trigger: DynamoDB Streams (automatic)"
+    echo "  - Trigger: JournalHead DynamoDB Stream (automatic)"
     echo "  - Check status: aws lambda get-function --endpoint-url http://localhost:${DOCKER_LOCALSTACK_PORT} --function-name pcqrses-read-model-updater"
 }
 
@@ -279,6 +279,10 @@ prepare_docker_environment() {
     # 既存のコンテナを停止・削除
     echo "🧹 Cleaning up existing containers..."
     docker compose $compose_files down
+
+    # DynamoDB のテーブル定義 (journal-head-table.json など) の変更を反映する
+    echo "🧱 Rebuilding DynamoDB setup image..."
+    docker compose $compose_files build dynamodb-setup
 }
 
 # ========================================
