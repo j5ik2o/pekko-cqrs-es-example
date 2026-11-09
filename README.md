@@ -202,12 +202,12 @@ sbt -Dpekko.persistence.dynamodb.version=1.1.0-20-51dca2ec-SNAPSHOT compile
 
 ### コア技術
 - **言語**: Scala 3.6.2
-- **ビルドツール**: SBT 1.10.6
-- **アクターフレームワーク**: Apache Pekko 1.1.2 (型付きアクター、永続化、クラスター)
+- **ビルドツール**: SBT 1.11.6
+- **アクターフレームワーク**: Apache Pekko 1.1.3 (型付きアクター、永続化、クラスター)
 
 ### データストア
 - **イベントストア**: DynamoDB (`pekko-persistence-dynamodb` 1.1.0 + LocalStack)
-- **Read Model**: PostgreSQL 16 + Slick 3.5.2
+- **Read Model**: PostgreSQL 16 + Slick 3.6.1
 
 ### API & シリアライゼーション
 - **API**: GraphQL (Sangria 4.2.4)
@@ -219,7 +219,7 @@ sbt -Dpekko.persistence.dynamodb.version=1.1.0-20-51dca2ec-SNAPSHOT compile
 - **順序保証**: 集約 (`persistenceId`) 単位。`ParallelizationFactor=1` と checkpoint で重複・順序を制御
 
 ### 開発環境
-- **ローカルAWS環境**: LocalStack 3.x
+- **ローカルAWS環境**: LocalStack 4.7
 - **コンテナ**: Docker & Docker Compose
 - **Java**: OpenJDK 17以降
 
@@ -229,7 +229,7 @@ sbt -Dpekko.persistence.dynamodb.version=1.1.0-20-51dca2ec-SNAPSHOT compile
 
 - **Docker & Docker Compose**: LocalStack、PostgreSQL、DynamoDBの実行に必要
 - **Java**: OpenJDK 17以降（推奨: OpenJDK 21）
-- **SBT**: 1.8以降
+- **SBT**: 1.11.6（`project/build.properties`）
 - **awslocal CLI**: LocalStackとの対話に使用（オプション）
 
 ```bash
