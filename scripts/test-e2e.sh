@@ -155,7 +155,7 @@ create_user_account_via_graphql() {
 # Step 2: Wait for eventual consistency
 wait_for_consistency() {
     print_header "Step 2: Wait for Event Processing"
-    print_info "Waiting for DynamoDB stream to process and update PostgreSQL..."
+    print_info "Waiting for the JournalHead stream to process and update PostgreSQL..."
 
     # Lambda関数がイベントを処理するまで待機
     local wait_time=$E2E_WAIT_AFTER_CREATE
@@ -298,7 +298,7 @@ main() {
             print_error "Failed to query user account after $MAX_RETRIES retries"
             print_info "Possible causes:"
             echo "  - Lambda function not deployed or not running"
-            echo "  - DynamoDB streams not configured"
+            echo "  - JournalHead stream not configured"
             echo "  - Database connection issues"
             exit 1
         fi

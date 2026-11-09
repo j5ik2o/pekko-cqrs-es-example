@@ -53,9 +53,5 @@
         "WriteCapacityUnits": 10
       }
     }
-  ],
-  "StreamSpecification": {
-    "StreamEnabled": true,
-    "StreamViewType" : "NEW_IMAGE"
-  }
+  ]
 }

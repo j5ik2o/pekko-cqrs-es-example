@@ -2,7 +2,7 @@
 services:
   # Command API - 単一ノード（ローカル開発用）
   command-api-1:
-    image: p-cqrs-es-command-api:0.1.0
+    image: pcqrses-command-api:0.1.0
     ports:
       - "${DOCKER_COMMAND_API_PORT:-50501}:18080"
     depends_on:

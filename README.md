@@ -5,7 +5,7 @@ Apache Pekkoを使用したCQRS（Command Query Responsibility Segregation）と
 ## 特徴
 
 - **完全なCQRS/ESアーキテクチャ**: コマンド側とクエリ側を完全に分離
-- **イベント駆動**: DynamoDB Streamsを使用した非同期イベント処理
+- **イベント駆動**: JournalHead の DynamoDB Streams を使用した、集約単位で順序保証された非同期イベント処理
 - **ローカル開発環境**: LocalStackを使用したAWSサービスのローカルエミュレーション
 - **GraphQL API**: コマンド側・クエリ側の両方でGraphQL APIを提供
 - **自動化テスト**: E2Eテストスクリプトによる完全なフロー検証
@@ -17,7 +17,7 @@ graph TB
     subgraph "Command Side"
         CommandAPI["Command API<br/>(GraphQL)<br/>Port: 50501"]
         PekkoActors["Pekko Actors<br/>(Event Sourced)"]
-        DynamoDB["DynamoDB<br/>(Event Store)<br/>(LocalStack)"]
+        DynamoDB["DynamoDB<br/>(Journal + JournalHead)<br/>(LocalStack)"]
     end
 
     subgraph "Query Side"
@@ -32,8 +32,8 @@ graph TB
     end
 
     CommandAPI -->|Mutation| PekkoActors
-    PekkoActors -->|Events| DynamoDB
-    DynamoDB -->|Stream| Streams
+    PekkoActors -->|"Events (same transaction)"| DynamoDB
+    DynamoDB -->|JournalHead Stream| Streams
     Streams -->|Trigger| Lambda
     Lambda -->|Update| PostgreSQL
     QueryAPI -->|Query| SlickDAOs
@@ -50,10 +50,46 @@ graph TB
 
 1. **コマンド受付**: GraphQL Mutationでコマンドを受け取る（例: `createUserAccount`）
 2. **イベント生成**: Pekkoアクターがドメインロジックを実行し、イベントを生成
-3. **イベント永続化**: イベントをDynamoDB（Event Store）に保存
-4. **イベント配信**: DynamoDB Streamsがイベントを検知
-5. **Read Model更新**: Lambda関数がイベントを処理し、PostgreSQLを更新
+3. **イベント永続化**: イベントを DynamoDB の `Journal` と `JournalHead` に同一トランザクションで保存
+4. **イベント配信**: `JournalHead` テーブルの DynamoDB Streams が、集約ごとの書き込み順にイベントを検知
+5. **Read Model更新**: Lambda関数がイベントを処理し、適用済みシーケンス番号と同一トランザクションでPostgreSQLを更新
 6. **クエリ実行**: GraphQL Queryでデータを取得（例: `getUserAccounts`）
+
+`Journal` テーブルは集約の復元・リプレイ用です。Read Model の順序保証には、1集約1アイテムとなる `JournalHead` テーブルのストリームを使います。異なる集約間の順序は保証対象外です。
+
+### JournalHead と Read Model Updater
+
+コマンド側は `head.enabled = true` で、ジャーナル行と `JournalHead` の1アイテムを同一の `TransactWriteItems` で書き込みます。`JournalHead` アイテムは次の属性を持ちます。
+
+| 属性 | 内容 |
+|---|---|
+| `persistence-id` | 集約の persistence id |
+| `sequence-nr` | その書き込みで最後に永続化されたシーケンス番号 |
+| `events` | その書き込みで発生したイベント（`sequence-nr` と `message` のリスト） |
+
+`read-model-updater` Lambda は `JournalHead` のストリームを `TRIM_HORIZON` から消費します。レコードごとに次の処理を1トランザクションで行います。
+
+1. `read_model_checkpoints` の行を `persistence_id` でロックする
+2. checkpoint 以下のシーケンス番号のイベントをスキップする
+3. 残りのイベントをシーケンス番号順に `user_accounts` へ適用する
+4. 最後に適用したシーケンス番号で checkpoint を更新する
+
+イベント適用と checkpoint 更新が同一トランザクションなので、Lambda が同じバッチを再試行しても二重適用されません。`events` が空のレコードはマイグレーション用のレコードとして扱い、checkpoint を進めずにスキップします。
+
+DynamoDB Streams の保持期間は24時間です。それを超えて停止した場合は `Journal` から Read Model を再構築し、checkpoint を最後にリプレイしたシーケンス番号に合わせてください。
+
+既存の集約がある環境で `head.enabled` を有効にする場合は、先にライブラリの `JournalHeadMigration` で `JournalHead` アイテムを作成してください。ローカル開発でデータを作り直す場合は、ボリュームを削除してから起動します。
+
+```bash
+docker compose -f docker-compose-common.yml -f docker-compose-local.yml down -v
+./scripts/run-single.sh up
+```
+
+未リリースのライブラリを使う場合は、ライブラリ側で `sbt publishLocal` を実行したうえで、次のようにバージョンを上書きできます。
+
+```bash
+sbt -Dpekko.persistence.dynamodb.version=1.1.0-20-51dca2ec-SNAPSHOT compile
+```
 
 ## 技術スタック
 
@@ -63,7 +99,7 @@ graph TB
 - **アクターフレームワーク**: Apache Pekko 1.1.2 (型付きアクター、永続化、クラスター)
 
 ### データストア
-- **イベントストア**: DynamoDB (Pekko Persistence + LocalStack)
+- **イベントストア**: DynamoDB (`pekko-persistence-dynamodb` 1.1.0 + LocalStack)
 - **Read Model**: PostgreSQL 16 + Slick 3.5.2
 
 ### API & シリアライゼーション
@@ -72,7 +108,8 @@ graph TB
 
 ### イベント処理
 - **イベント処理基盤**: AWS Lambda (LocalStack)
-- **非同期処理**: DynamoDB Streams
+- **非同期処理**: DynamoDB Streams (`JournalHead` テーブル)
+- **順序保証**: 集約 (`persistenceId`) 単位。`ParallelizationFactor=1` と checkpoint で重複・順序を制御
 
 ### 開発環境
 - **ローカルAWS環境**: LocalStack 3.x
@@ -346,7 +383,7 @@ pekko-cqrs-es-example/
 │   │       │   └── application.conf    # Query API設定
 │   │       └── scala/
 │   │           └── QueryApiMain.scala
-│   └── read-model-updater/       # Lambda関数（イベント→Read Model更新）
+│   └── read-model-updater/       # Lambda関数（JournalHeadストリーム→Read Model更新）
 │       └── src/main/
 │           ├── resources/
 │           │   └── application.conf    # Lambda設定
@@ -487,7 +524,7 @@ E2Eテストスクリプトは以下を自動実行します：
 
 1. **ヘルスチェック**: Command APIとQuery APIの稼働確認
 2. **ユーザー作成**: GraphQL Mutationでユーザーアカウント作成
-3. **イベント処理待機**: Lambda関数がイベントを処理するまで待機
+3. **イベント処理待機**: Lambda関数が JournalHead ストリームのイベントを処理するまで待機
 4. **データ取得**: GraphQL Queryでデータ取得を試行（リトライ機能付き）
 5. **整合性検証**: 作成したデータが正しく取得できることを確認
 
@@ -534,8 +571,9 @@ curl http://localhost:4566/_localstack/health
 # Lambda関数のログを確認（CloudWatch Logs）
 awslocal logs tail /aws/lambda/read-model-updater --follow
 
-# DynamoDB Streamsの設定を確認
+# JournalHead の DynamoDB Streams の設定を確認
 awslocal dynamodbstreams list-streams
+awslocal dynamodb describe-table --table-name JournalHead
 
 # Lambda関数のイベントソースマッピングを確認
 awslocal lambda list-event-source-mappings
@@ -560,11 +598,16 @@ sbt infoQuery
 # テーブルの存在確認
 awslocal dynamodb list-tables
 
-# テーブルの内容確認
-awslocal dynamodb scan --table-name Journal
+# JournalHead の内容確認（events と sequence-nr が入っていること）
+awslocal dynamodb scan --table-name JournalHead
 
-# テーブル定義の確認
+# Journal と JournalHead のテーブル定義の確認
 awslocal dynamodb describe-table --table-name Journal
+awslocal dynamodb describe-table --table-name JournalHead
+
+# Read Model の checkpoint 確認
+psql -h localhost -p 50504 -U postgres -d p-cqrs-es_development \
+  -c 'select * from read_model_checkpoints order by updated_at desc;'
 ```
 
 ### ビルドエラーが発生する
