@@ -1,28 +1,32 @@
 #!/bin/bash
 
-# JournalHead の sequence-nr で read_model_checkpoints を初期化する
-#
-# 既存環境の JournalHead マイグレーション後に使います。
-# Read Model が JournalHead の sequence-nr まで追いついている場合だけ実行してください。
-# 追いついていない場合は、このスクリプトを使わず Journal から Read Model を再構築してください。
-#
-# 使い方:
-#   ./scripts/init-read-model-checkpoints.sh              # dry-run
-#   ./scripts/init-read-model-checkpoints.sh --execute    # checkpoint を更新
-#
-# 接続先:
-#   DYNAMODB_ENDPOINT (既定: http://localhost:${DOCKER_LOCALSTACK_PORT:-50503})
-#   本番 AWS では https://dynamodb.<region>.amazonaws.com を設定してください。
-#   PSQL_CMD を設定すると、そのコマンドを psql として使います。
-#   例: PSQL_CMD='psql postgresql://user:pass@host:5432/db'
-#   PSQL_CMD が未設定の場合は docker compose の postgres サービスに接続します。
+# JournalHead の sequence-nr で read_model_checkpoints を初期化する。
+# 既存環境の JournalHead マイグレーション後に使う。
 
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
 usage() {
-  sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
+  cat <<'EOF'
+JournalHead の sequence-nr で read_model_checkpoints を初期化する
+
+既存環境の JournalHead マイグレーション後に使います。
+Read Model が JournalHead の sequence-nr まで追いついている場合だけ実行してください。
+追いついていない場合は、このスクリプトを使わず Journal から Read Model を再構築してください。
+
+使い方:
+  ./scripts/init-read-model-checkpoints.sh              # dry-run
+  ./scripts/init-read-model-checkpoints.sh --execute    # checkpoint を更新
+
+接続先:
+  DYNAMODB_ENDPOINT (既定: J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT
+                     または http://localhost:${DOCKER_LOCALSTACK_PORT:-50503})
+  PSQL_URL を設定すると、その接続文字列で psql を実行します。
+  例: PSQL_URL='postgresql://user:pass@host:5432/db'
+  PSQL_URL が未設定の場合は docker compose の postgres サービスに接続します。
+  PSQL_BIN で psql の実行ファイルを変更できます (既定: psql)。
+EOF
 }
 
 MODE="dry-run"
@@ -46,21 +50,33 @@ done
 
 export AWS_REGION="${AWS_REGION:-ap-northeast-1}"
 export AWS_DEFAULT_REGION="${AWS_DEFAULT_REGION:-$AWS_REGION}"
-export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-dummy}"
-export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-dummy}"
 
 LOCALSTACK_PORT="${DOCKER_LOCALSTACK_PORT:-50503}"
-DYNAMODB_ENDPOINT="${DYNAMODB_ENDPOINT:-http://localhost:${LOCALSTACK_PORT}}"
+DYNAMODB_ENDPOINT="${DYNAMODB_ENDPOINT:-${J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT:-http://localhost:${LOCALSTACK_PORT}}}"
 HEAD_TABLE="${J5IK2O_DYNAMO_DB_JOURNAL_HEAD_TABLE_NAME:-JournalHead}"
 
 POSTGRES_USER="${POSTGRES_USER:-postgres}"
 POSTGRES_DB="${POSTGRES_DB:-p-cqrs-es_development}"
+PSQL_BIN="${PSQL_BIN:-psql}"
 
 ENDPOINT_ARGS=(--endpoint-url "$DYNAMODB_ENDPOINT")
 
+is_local_endpoint() {
+  case "$1" in
+    http://localhost:*|http://127.0.0.1:*|http://localstack:*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# ローカルの LocalStack 以外では、IAM ロールや AWS_PROFILE を上書きしない。
+if is_local_endpoint "$DYNAMODB_ENDPOINT"; then
+  export AWS_ACCESS_KEY_ID="${AWS_ACCESS_KEY_ID:-dummy}"
+  export AWS_SECRET_ACCESS_KEY="${AWS_SECRET_ACCESS_KEY:-dummy}"
+fi
+
 psql_exec() {
-  if [ -n "${PSQL_CMD:-}" ]; then
-    eval "$PSQL_CMD"
+  if [ -n "${PSQL_URL:-}" ]; then
+    "$PSQL_BIN" -v ON_ERROR_STOP=1 "$PSQL_URL"
   else
     docker compose -f docker-compose-common.yml -f docker-compose-local.yml \
       exec -T postgres psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1
@@ -73,7 +89,7 @@ if ! printf 'select 1 from read_model_checkpoints limit 1;\n' | psql_exec >/dev/
   exit 1
 fi
 
-echo "Scanning ${HEAD_TABLE}..."
+echo "Scanning ${HEAD_TABLE} at ${DYNAMODB_ENDPOINT}..."
 all_items='[]'
 next_token=''
 
@@ -97,7 +113,8 @@ while :; do
       --output json)
   fi
 
-  all_items=$(jq -c --argjson acc "$all_items" '$acc + (.Items // [])' <<<"$response")
+  # JSON を jq の引数にすると、件数が多いときに E2BIG になるため標準入力で渡す。
+  all_items=$(printf '%s\n%s\n' "$all_items" "$response" | jq -sc '.[0] + (.[1].Items // [])')
   next_token=$(jq -r '.NextToken // empty' <<<"$response")
   if [ -z "$next_token" ]; then
     break

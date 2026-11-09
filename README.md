@@ -125,12 +125,17 @@ J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT=https://dynamodb.ap-northeast
 J5IK2O_DYNAMO_DB_SNAPSHOT_DYNAMO_DB_CLIENT_ENDPOINT=https://dynamodb.ap-northeast-1.amazonaws.com
 ```
 
-`init-read-model-checkpoints.sh` は、`PSQL_CMD` が未設定の場合は Docker Compose の `postgres` サービスに接続します。本番環境では `PSQL_CMD` を設定してください。
+`init-read-model-checkpoints.sh` は、`PSQL_URL` が未設定の場合は Docker Compose の `postgres` サービスに接続します。本番環境では `PSQL_URL` を設定してください。DynamoDB の接続先は `J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT` からも解決されます。
 
 ```bash
-PSQL_CMD='psql postgresql://user:password@db.example.com:5432/p-cqrs-es_development' \
+J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT=https://dynamodb.ap-northeast-1.amazonaws.com \
+PSQL_URL='postgresql://user:password@db.example.com:5432/p-cqrs-es_development' \
   ./scripts/init-read-model-checkpoints.sh --execute
 ```
+
+`j5ik2o.conf` の `access-key-id` / `secret-access-key` はローカル用の固定値です。本番環境では `J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ACCESS_KEY_ID` と `..._SECRET_ACCESS_KEY` を設定するか、設定ファイルから削除して IAM ロールを使ってください。
+
+checkpoint 初期化の前に、旧 Read Model Updater が Journal の全レコードを処理し終えたことを確認してください。Lambda のイベントソースマッピングが `No records processed` に戻り、エラーログがない状態が目安です。このサンプルの Read Model は集約ごとの適用済みシーケンス番号を持たないため、追いつきを自動で証明できません。確認できない場合は `--execute` を実行せず、`Journal` から Read Model を再構築してください。
 
 checkpoint を初期化するのは、Read Model が移行時点の `sequence-nr` まで正しく反映されている場合だけです。移行結果に `raised` と表示された集約や、Read Model が遅れている集約は、checkpoint を初期化せず `Journal` から Read Model を再構築してください。
 
