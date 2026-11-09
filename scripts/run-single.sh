@@ -31,6 +31,7 @@ show_help() {
     echo "  --db-only    Run only database services in Docker (for debugging)"
     echo "  --no-deploy  Do not auto-deploy LocalStack Lambda"
     echo "  --deploy     Force auto-deploy (default)"
+    echo "  --volumes    Remove volumes when running down"
     echo "  -h, --help   Show this help message"
     echo ""
     echo "Examples:"

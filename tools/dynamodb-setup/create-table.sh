@@ -52,10 +52,18 @@ create_table() {
     echo "Endpoint parameter: [$endpoint_param]"
     echo "JSON content: $json_content"
     
-    if ! aws dynamodb create-table \
+    local output
+    if ! output=$(aws dynamodb create-table \
         $endpoint_param \
-        --cli-input-json "$json_content"; then
-        handle_error "Failed to create $table_name table"
+        --cli-input-json "$json_content" 2>&1); then
+        if echo "$output" | grep -q "ResourceInUseException"; then
+            echo "Table $table_name already exists, skipping."
+        else
+            echo "$output" >&2
+            handle_error "Failed to create $table_name table"
+        fi
+    else
+        echo "$output"
     fi
 }
 
