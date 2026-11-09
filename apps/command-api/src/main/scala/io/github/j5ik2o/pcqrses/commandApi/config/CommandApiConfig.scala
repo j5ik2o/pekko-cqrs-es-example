@@ -6,7 +6,7 @@ final case class CommandApiConfig(
   actorTimeout: scala.concurrent.duration.FiniteDuration,
   server: ServerConfig,
   loadBalancerConfig: LoadBalancerConfig
-                                 )
+)
 
 object CommandApiConfig {
   def from(config: com.typesafe.config.Config): CommandApiConfig =

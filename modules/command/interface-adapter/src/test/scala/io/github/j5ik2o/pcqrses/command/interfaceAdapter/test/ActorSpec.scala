@@ -37,6 +37,7 @@ abstract class ActorSpec(testKit: ActorTestKit)
 
   def this() = this(ActorTestKit(ActorTestKitBase.testNameFromCallStack()))
 
+  // format: off
   def this(config: String) = {
     this(
       ActorTestKit(
@@ -59,6 +60,7 @@ abstract class ActorSpec(testKit: ActorTestKit)
       )
     )
   }
+  // format: on
 
   implicit def classicSystem: ActorSystem = system.toClassic
 

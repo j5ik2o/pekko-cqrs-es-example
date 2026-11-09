@@ -3,11 +3,11 @@ package io.github.j5ik2o.pcqrses.commandApi
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users.UserAccountAggregateRegistry
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.graphql.GraphQLService
 import io.github.j5ik2o.pcqrses.command.useCase.users.UserAccountUseCase
-import io.github.j5ik2o.pcqrses.commandApi.config.{CommandApiConfig, LoadBalancerConfig, ServerConfig}
+import io.github.j5ik2o.pcqrses.commandApi.config.{CommandApiConfig, LoadBalancerConfig}
 import io.github.j5ik2o.pcqrses.commandApi.routes.GraphQLRoutes
 import org.apache.pekko.actor.CoordinatedShutdown
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import org.apache.pekko.actor.typed.{ActorSystem, Behavior, Scheduler, scaladsl}
+import org.apache.pekko.actor.typed.{scaladsl, ActorSystem, Behavior, Scheduler}
 import org.apache.pekko.cluster.typed.Cluster
 import org.apache.pekko.http.scaladsl.Http
 import org.apache.pekko.http.scaladsl.server.Directives.*
@@ -15,7 +15,7 @@ import org.apache.pekko.management.cluster.bootstrap.ClusterBootstrap
 import org.apache.pekko.management.scaladsl.PekkoManagement
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.util.Timeout
-import org.apache.pekko.{Done, pattern}
+import org.apache.pekko.{pattern, Done}
 import zio.*
 
 import scala.concurrent.duration.*
@@ -36,7 +36,8 @@ object MainActor {
       implicit val scheduler: Scheduler = system.scheduler
       implicit val zioRuntime: Runtime[Any] = Runtime.default
 
-      val commandApiConfig = CommandApiConfig.from(system.settings.config.getConfig("pcqrses.command-api"))
+      val commandApiConfig =
+        CommandApiConfig.from(system.settings.config.getConfig("pcqrses.command-api"))
 
       val isClusterEnabled = system.settings.config.hasPath("pekko.cluster.enabled") &&
         system.settings.config.getBoolean("pekko.cluster.enabled")
@@ -102,10 +103,12 @@ object MainActor {
       }
     }
 
-  private def initializeUserAccountUseCase(commandApiConfig: CommandApiConfig, context: scaladsl.ActorContext[Command])(implicit
-                                                                                    system: ActorSystem[?],
-                                                                                    executionContext: ExecutionContextExecutor,
-                                                                                    zioRuntime: Runtime[Any]
+  private def initializeUserAccountUseCase(
+    commandApiConfig: CommandApiConfig,
+    context: scaladsl.ActorContext[Command])(implicit
+    system: ActorSystem[?],
+    executionContext: ExecutionContextExecutor,
+    zioRuntime: Runtime[Any]
   ): UserAccountUseCase = {
     implicit val timeout: Timeout = Timeout(commandApiConfig.actorTimeout)
     implicit val scheduler: Scheduler = system.scheduler
