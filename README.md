@@ -78,7 +78,114 @@ graph TB
 
 DynamoDB Streams の保持期間は24時間です。それを超えて停止した場合は `Journal` から Read Model を再構築し、checkpoint を最後にリプレイしたシーケンス番号に合わせてください。
 
-既存の集約がある環境で `head.enabled` を有効にする場合は、先にライブラリの `JournalHeadMigration` で `JournalHead` アイテムを作成してください。ローカル開発でデータを作り直す場合は、ボリュームを削除してから起動します。
+### 既存環境の JournalHead マイグレーション
+
+既に `Journal` と Read Model がある環境で `head.enabled` を有効にする手順です。`JournalHeadMigration` は `Journal` と `Snapshot` を走査し、集約ごとに `JournalHead` アイテムを作成します。作成されるアイテムの `events` は空です。Read Model は移行時点で最新である前提なので、移行後に checkpoint を初期化するか、`Journal` から Read Model を再構築してください。
+
+ヘッドモードでは `Journal` テーブルの DynamoDB Streams を無効にし、`JournalHead` テーブルのストリームだけを使います。`Journal` テーブルのストリームが残っていると preflight が失敗します。
+
+1. `JournalHead` テーブルと `read_model_checkpoints` テーブルを作成する。ローカルでは `./scripts/run-single.sh up`、既存環境では `tools/dynamodb-setup` と Flyway を使う
+2. すべての書き込みノードと Read Model Updater を停止する
+3. dry-run で移行対象を確認する
+
+   ```bash
+   ./scripts/migrate-journal-head.sh
+   ```
+
+4. 問題がなければ移行を実行する
+
+   ```bash
+   ./scripts/migrate-journal-head.sh --execute
+   ```
+
+5. Read Model が `JournalHead` の `sequence-nr` まで追いついている場合だけ、checkpoint を初期化する
+
+   ```bash
+   ./scripts/init-read-model-checkpoints.sh
+   ./scripts/init-read-model-checkpoints.sh --execute
+   ```
+
+6. ストリーム設定を確認する
+
+   ```bash
+   ./scripts/migrate-journal-head.sh --preflight
+   ```
+
+7. `head.enabled = true` でコマンド側を起動し、Read Model Updater のイベントソースマッピングを有効化する
+8. 移行中に書き込みがあった場合は、もう一度移行を実行する
+
+   ```bash
+   ./scripts/migrate-journal-head.sh --execute
+   ```
+
+`migrate-journal-head.sh` は `commandApi` の設定を使って移行ツールを実行します。接続先は次の環境変数で上書きできます。
+
+```bash
+J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT=https://dynamodb.ap-northeast-1.amazonaws.com
+J5IK2O_DYNAMO_DB_SNAPSHOT_DYNAMO_DB_CLIENT_ENDPOINT=https://dynamodb.ap-northeast-1.amazonaws.com
+```
+
+`init-read-model-checkpoints.sh` は、`PSQL_URL` が未設定の場合は Docker Compose の `postgres` サービスに接続します。本番環境では `PSQL_URL` を設定してください。DynamoDB の接続先は `J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT` からも解決されます。
+
+```bash
+J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ENDPOINT=https://dynamodb.ap-northeast-1.amazonaws.com \
+PSQL_URL='postgresql://user:password@db.example.com:5432/p-cqrs-es_development' \
+  ./scripts/init-read-model-checkpoints.sh --execute
+```
+
+`j5ik2o.conf` の `access-key-id` / `secret-access-key` はローカル用の固定値です。本番環境では `J5IK2O_DYNAMO_DB_JOURNAL_DYNAMO_DB_CLIENT_ACCESS_KEY_ID` と `..._SECRET_ACCESS_KEY` を設定するか、設定ファイルから削除して IAM ロールを使ってください。
+
+checkpoint 初期化の前に、旧 Read Model Updater が Journal の全レコードを処理し終えたことを確認してください。Lambda のイベントソースマッピングが `No records processed` に戻り、エラーログがない状態が目安です。このサンプルの Read Model は集約ごとの適用済みシーケンス番号を持たないため、追いつきを自動で証明できません。確認できない場合は `--execute` を実行せず、`Journal` から Read Model を再構築してください。
+
+checkpoint を初期化するのは、Read Model が移行時点の `sequence-nr` まで正しく反映されている場合だけです。移行結果に `raised` と表示された集約や、Read Model が遅れている集約は、checkpoint を初期化せず `Journal` から Read Model を再構築してください。
+
+#### ローカルで移行を試す
+
+ヘッドモード有効の状態で作ったデータから `JournalHead` アイテムと checkpoint を削除すると、既存環境を模擬できます。
+
+```bash
+export AWS_ACCESS_KEY_ID=dummy
+export AWS_SECRET_ACCESS_KEY=dummy
+export AWS_DEFAULT_REGION=ap-northeast-1
+
+# 1. ユーザーを作成し、JournalHead と checkpoint ができることを確認する
+./scripts/test-e2e.sh
+
+# 2. 書き込みと Read Model Updater を停止する
+docker compose -f docker-compose-common.yml -f docker-compose-local.yml stop command-api-1
+MAPPING_UUID=$(aws lambda list-event-source-mappings \
+  --endpoint-url http://localhost:50503 \
+  --function-name pcqrses-read-model-updater \
+  --query 'EventSourceMappings[0].UUID' --output text)
+aws lambda update-event-source-mapping \
+  --endpoint-url http://localhost:50503 \
+  --uuid "$MAPPING_UUID" --no-enabled
+
+# 3. JournalHead アイテムと checkpoint を削除する
+aws dynamodb delete-item --endpoint-url http://localhost:50503 \
+  --table-name JournalHead \
+  --key '{"persistence-id":{"S":"UserAccount-<作成したID>"}}'
+docker compose -f docker-compose-common.yml -f docker-compose-local.yml \
+  exec -T postgres psql -U postgres -d p-cqrs-es_development \
+  -c "delete from read_model_checkpoints where persistence_id = 'UserAccount-<作成したID>';"
+
+# 4. 移行と checkpoint 初期化
+./scripts/migrate-journal-head.sh
+./scripts/migrate-journal-head.sh --execute
+./scripts/init-read-model-checkpoints.sh
+./scripts/init-read-model-checkpoints.sh --execute
+
+# 5. preflight と再起動
+./scripts/migrate-journal-head.sh --preflight
+docker compose -f docker-compose-common.yml -f docker-compose-local.yml up -d --no-deps command-api-1
+aws lambda update-event-source-mapping \
+  --endpoint-url http://localhost:50503 \
+  --uuid "$MAPPING_UUID" --enabled
+```
+
+再起動後に新しいユーザーを作成し、Read Model に反映されることを確認します。
+
+ローカル開発でデータを作り直す場合は、ボリュームを削除してから起動します。
 
 ```bash
 docker compose -f docker-compose-common.yml -f docker-compose-local.yml down -v
@@ -416,6 +523,8 @@ pekko-cqrs-es-example/
 │           └── serialization/    # カスタムシリアライザ
 ├── scripts/
 │   ├── run-single.sh             # シングルノードモード起動スクリプト
+│   ├── migrate-journal-head.sh   # 既存環境の JournalHead マイグレーション
+│   ├── init-read-model-checkpoints.sh # 移行後の checkpoint 初期化
 │   ├── test-e2e.sh               # E2Eテストスクリプト
 │   └── test-graphql.sh           # GraphQLテストスクリプト
 ├── tools/

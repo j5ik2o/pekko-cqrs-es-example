@@ -18,6 +18,7 @@ setup_defaults() {
     DETACHED="${DETACHED:--d}"
     ATTACH_MODE="${ATTACH_MODE:-false}"
     AUTO_DEPLOY="${AUTO_DEPLOY:-true}"
+    DOWN_VOLUMES="${DOWN_VOLUMES:-false}"
 }
 
 # ========================================
@@ -49,6 +50,7 @@ parse_arguments() {
             --db-only) DB_ONLY=true; shift ;;
             --no-deploy) AUTO_DEPLOY=false; shift ;;
             --deploy) AUTO_DEPLOY=true; shift ;;
+            --volumes) DOWN_VOLUMES=true; shift ;;
             -h|--help) SHOW_HELP=true; shift ;;
             *)
                 # logsコマンドの場合は追加の引数を許可
@@ -69,7 +71,11 @@ parse_arguments() {
 handle_down_command() {
     echo "🛑 Stopping services..."
     shift  # 最初の引数（compose_files）を除去
-    docker compose "$@" down
+    if [ "$DOWN_VOLUMES" = true ]; then
+        docker compose "$@" down -v
+    else
+        docker compose "$@" down
+    fi
     echo "✅ Services stopped"
     exit 0
 }
