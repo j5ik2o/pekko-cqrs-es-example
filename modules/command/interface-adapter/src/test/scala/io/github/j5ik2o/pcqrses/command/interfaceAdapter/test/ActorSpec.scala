@@ -37,18 +37,21 @@ abstract class ActorSpec(testKit: ActorTestKit)
 
   def this() = this(ActorTestKit(ActorTestKitBase.testNameFromCallStack()))
 
-  def this(config: String) =
+  // format: off
+  def this(config: String) = {
     this(
       ActorTestKit(
         ActorTestKitBase.testNameFromCallStack(),
         ConfigFactory.parseString(config)
       )
     )
+  }
 
-  def this(config: Config) =
+  def this(config: Config) = {
     this(ActorTestKit(ActorTestKitBase.testNameFromCallStack(), config))
+  }
 
-  def this(config: Config, settings: TestKitSettings) =
+  def this(config: Config, settings: TestKitSettings) = {
     this(
       ActorTestKit(
         ActorTestKitBase.testNameFromCallStack(),
@@ -56,6 +59,8 @@ abstract class ActorSpec(testKit: ActorTestKit)
         settings
       )
     )
+  }
+  // format: on
 
   implicit def classicSystem: ActorSystem = system.toClassic
 
