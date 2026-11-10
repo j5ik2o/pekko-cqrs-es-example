@@ -192,11 +192,35 @@ docker compose -f docker-compose-common.yml -f docker-compose-local.yml down -v
 ./scripts/run-single.sh up
 ```
 
-未リリースのライブラリを使う場合は、ライブラリ側で `sbt publishLocal` を実行したうえで、次のようにバージョンを上書きできます。
+### PPD 1.2.0 の検証
+
+標準ビルドは Maven Central の公開版 1.2.0 を使用します。
+Java 21、sbt、protoc、Docker、AWS CLI、Python 3 が必要です。
 
 ```bash
-sbt -Dpekko.persistence.dynamodb.version=1.1.0-20-51dca2ec-SNAPSHOT compile
+sbt -batch compile test lint
+python3 scripts/test-ppd-smoke.py
 ```
+
+スモークは専用の DynamoDB Local を `-sharedDb -inMemory` で起動します。
+実 command-api でユーザーを作成し、Journal 行と JournalHead の属性を検証します。
+書き込みプロセスを停止してから専用テーブルの Head を削除し、移行の dry-run が
+書き込まないこと、execute が Head を復元すること、再実行で変化しないことを確認します。
+実行ログは `target/ppd-smoke/` に保存します。専用コンテナだけを終了時に削除します。
+
+既存単体テストは inmem journal を使うため、PPD 互換性の確認にはこのスモークも必要です。
+DynamoDB Local の項目検証は RMU のストリーム消費を検証しません。
+CI では Local スモークに加えて、LocalStack / PostgreSQL の E2E も実行します。
+手元で RMU を確認する場合は既存の LocalStack / PostgreSQL 環境を起動し、Lambda をデプロイしたうえで
+`./scripts/test-e2e.sh` により Command API から Query API への反映を確認します。
+
+1.2.0 では Journal 行 400 KB、Head 項目 400 KB、1 回 99 イベント、
+トランザクション 4 MB の上限超えは `asyncWriteMessages` 全体の失敗になります。
+`onPersistFailure` の後にアクターが停止し、欠番は残りません。
+`onPersistRejected` による継続を前提にしないでください。
+`JournalHead.events` は配列で、`persistAll` 1 回分も Head の 400 KB 以内に収めます。
+このサンプルは 1 コマンド 1 イベントを保存し、上限超えの継続処理は実装していません。
+スモークは通常の書き込みと移行を対象とし、上限超えの障害注入は対象外です。
 
 ## 技術スタック
 
@@ -206,7 +230,7 @@ sbt -Dpekko.persistence.dynamodb.version=1.1.0-20-51dca2ec-SNAPSHOT compile
 - **アクターフレームワーク**: Apache Pekko 1.1.3 (型付きアクター、永続化、クラスター)
 
 ### データストア
-- **イベントストア**: DynamoDB (`pekko-persistence-dynamodb` 1.1.0 + LocalStack)
+- **イベントストア**: DynamoDB (`pekko-persistence-dynamodb` 1.2.0 + LocalStack)
 - **Read Model**: PostgreSQL 16 + Slick 3.6.1
 
 ### API & シリアライゼーション
@@ -391,45 +415,13 @@ query SearchUsers($term: String!) {
 }
 ```
 
-#### 3. ユーザー名の変更（Command API）
+#### 公開されている操作
 
-```graphql
-mutation RenameUserAccount($input: RenameUserAccountInput!) {
-  renameUserAccount(input: $input) {
-    id
-  }
-}
-```
-
-Variables:
-```json
-{
-  "input": {
-    "userAccountId": "01KAAM3Q5PVKKWW1ZSEH6A68FT",
-    "firstName": "次郎",
-    "lastName": "田中"
-  }
-}
-```
-
-#### 4. ユーザーアカウントの削除（Command API）
-
-```graphql
-mutation DeleteUserAccount($input: DeleteUserAccountInput!) {
-  deleteUserAccount(input: $input) {
-    id
-  }
-}
-```
-
-Variables:
-```json
-{
-  "input": {
-    "userAccountId": "01KAAM3Q5PVKKWW1ZSEH6A68FT"
-  }
-}
-```
+Command GraphQL の Mutation は `createUserAccount` のみです。
+名前の変更と削除は集約内部のコマンドとして存在しますが、GraphQL には公開していません。
+`RenameUserAccountInput` / `renameUserAccount` と
+`DeleteUserAccountInput` / `deleteUserAccount` は利用できません。
+作成は上記の Mutation、取得・検索は Query API を使用してください。
 
 ### curlを使用したコマンドライン操作
 
