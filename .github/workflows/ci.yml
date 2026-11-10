@@ -34,6 +34,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y protobuf-compiler
 
+      - name: Verify E2E CLI response fixtures (fake transport)
+        run: python3 scripts/test-e2e-response-fixtures.py .
+
+      - name: Upload E2E CLI fixture diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-response-fixture-logs
+          path: target/e2e-response-fixtures/
+          if-no-files-found: ignore
+
       - name: Compile
         run: sbt -batch compile
         env:
