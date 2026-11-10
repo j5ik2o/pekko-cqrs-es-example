@@ -48,3 +48,55 @@ jobs:
         run: sbt -batch lint
         env:
           PROTOC_PATH: /usr/bin/protoc
+
+      - name: PPD command-api and migration smoke
+        run: python3 scripts/test-ppd-smoke.py
+        env:
+          PROTOC_PATH: /usr/bin/protoc
+
+      - name: Upload PPD smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ppd-smoke-logs
+          path: target/ppd-smoke/
+          if-no-files-found: ignore
+
+      - name: Build APIs for stream E2E
+        run: sbt -batch dockerBuildAll
+        env:
+          PROTOC_PATH: /usr/bin/protoc
+
+      - name: Start LocalStack and PostgreSQL E2E
+        run: |
+          docker compose -f docker-compose-common.yml -f docker-compose-local.yml up -d localstack postgres flyway dynamodb-setup command-api-1 query-api
+          curl --fail --retry 60 --retry-delay 2 --retry-all-errors http://localhost:50501/api/health
+          curl --fail --retry 60 --retry-delay 2 --retry-all-errors http://localhost:50502/api/health
+
+      - name: Deploy RMU stream consumer
+        run: bash scripts/deploy-lambda-localstack.sh
+        env:
+          PROTOC_PATH: /usr/bin/protoc
+
+      - name: Verify command to stream to query E2E
+        run: bash scripts/test-e2e.sh
+        env:
+          E2E_MAX_RETRIES: "30"
+          E2E_RETRY_DELAY: "3"
+
+      - name: Collect stream E2E logs
+        if: always()
+        run: |
+          mkdir -p target/stream-e2e
+          docker compose -f docker-compose-common.yml -f docker-compose-local.yml logs --no-color > target/stream-e2e/compose.log 2>&1
+
+      - name: Upload stream E2E logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: stream-e2e-logs
+          path: target/stream-e2e/
+
+      - name: Stop E2E services
+        if: always()
+        run: docker compose -f docker-compose-common.yml -f docker-compose-local.yml down

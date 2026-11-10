@@ -140,8 +140,7 @@ create_user_account_via_graphql() {
         ERROR_MSG=$(echo "$RESPONSE" | jq -r '.errors[0].message')
         if echo "$ERROR_MSG" | grep -q -i "already exists"; then
             print_error "UserAccount with email $TEST_EMAIL already exists"
-            print_info "This might be from a previous test run. Continuing with query test..."
-            return 0
+            return 1
         else
             print_error "Failed to create user account: $ERROR_MSG"
             return 1
@@ -200,7 +199,7 @@ query_user_account_via_graphql() {
             QUERIED_LAST_NAME=$(echo "$USER_DATA" | jq -r '.lastName')
             QUERIED_USER_ID=$(echo "$USER_DATA" | jq -r '.id')
 
-            if [ "$QUERIED_FIRST_NAME" = "$TEST_FIRST_NAME" ] && [ "$QUERIED_LAST_NAME" = "$TEST_LAST_NAME" ]; then
+            if [ "$QUERIED_FIRST_NAME" = "$TEST_FIRST_NAME" ] && [ "$QUERIED_LAST_NAME" = "$TEST_LAST_NAME" ] && [ "$QUERIED_USER_ID" = "$CREATED_USER_ID" ]; then
                 print_success "User data matches: $QUERIED_FIRST_NAME $QUERIED_LAST_NAME"
 
                 # 3.2: Query by ID
@@ -221,13 +220,16 @@ query_user_account_via_graphql() {
 
                 ID_RESPONSE=$(execute_graphql "$QUERY_API_ENDPOINT" "$id_query" "$id_variables")
 
-                if echo "$ID_RESPONSE" | jq -e '.data.getUserAccount' > /dev/null 2>&1; then
+                if echo "$ID_RESPONSE" | jq -e --arg id "$CREATED_USER_ID" --arg first "$TEST_FIRST_NAME" --arg last "$TEST_LAST_NAME" \
+                    '.errors == null and .data.getUserAccount.id == $id and .data.getUserAccount.firstName == $first and .data.getUserAccount.lastName == $last' > /dev/null 2>&1; then
                     print_success "UserAccount successfully queried by ID"
                 else
                     print_error "Failed to query UserAccount by ID"
+                    return 1
                 fi
             else
-                print_error "User data mismatch! Expected: $TEST_FIRST_NAME $TEST_LAST_NAME"
+                print_error "User data mismatch! Expected: $CREATED_USER_ID $TEST_FIRST_NAME $TEST_LAST_NAME"
+                return 1
             fi
         else
             print_error "UserAccount not found in database"

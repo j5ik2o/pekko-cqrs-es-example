@@ -15,7 +15,7 @@ object Version {
   // 未リリースのライブラリをローカルで試す場合は
   // -Dpekko.persistence.dynamodb.version=<version> で上書きできる。
   val pekkoPersistenceDynamoDB =
-    sys.props.getOrElse("pekko.persistence.dynamodb.version", "1.1.0")
+    sys.props.getOrElse("pekko.persistence.dynamodb.version", "1.2.0")
 }
 
 object Dependencies {
