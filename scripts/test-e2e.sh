@@ -188,7 +188,7 @@ query_user_account_via_graphql() {
 
     if echo "$RESPONSE" | jq -e '.data.getUserAccounts' > /dev/null 2>&1; then
         # テストユーザーが含まれているか確認
-        USER_DATA=$(echo "$RESPONSE" | jq ".data.getUserAccounts[] | select(.firstName == \"$TEST_FIRST_NAME\" and .lastName == \"$TEST_LAST_NAME\")")
+        USER_DATA=$(echo "$RESPONSE" | jq --arg id "$CREATED_USER_ID" '.data.getUserAccounts[] | select(.id == $id)')
 
         if [ -n "$USER_DATA" ] && [ "$USER_DATA" != "null" ]; then
             print_success "UserAccount found via GraphQL!"
