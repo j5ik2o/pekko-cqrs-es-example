@@ -23,6 +23,8 @@ CI also retains the separate LocalStack and PostgreSQL stream E2E.
 
 The same-name fixture returns another account with the same name before the
 created account. The CLI must find the created ID and verify the ID query.
+Negative fixtures must also emit the diagnostic for the expected failure stage.
+An unrelated exit 1, such as a missing tool, does not satisfy the fixture.
 
 To target a checkout or script from another directory, pass their paths.
 Relative script and output paths resolve against the target checkout.
@@ -32,6 +34,9 @@ python3 /path/to/runner/scripts/test-e2e-response-fixtures.py /path/to/checkout 
   --script scripts/test-e2e.sh --case same-name \
   --output-dir target/e2e-response-fixtures-same-name
 ```
+
+Selecting a negative fixture also runs the normal fixture as a control, so
+an environment that fails every invocation cannot pass a negative-only run.
 
 The runner exits 1 when a case differs from its expected exit code or times out.
 It prints failing stdout and stderr. Each run writes per-case logs and
