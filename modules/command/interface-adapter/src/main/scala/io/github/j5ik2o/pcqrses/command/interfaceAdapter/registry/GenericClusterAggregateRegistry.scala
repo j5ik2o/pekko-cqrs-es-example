@@ -1,7 +1,7 @@
 package io.github.j5ik2o.pcqrses.command.interfaceAdapter.registry
 
 import io.github.j5ik2o.pcqrses.command.domain.support.EntityId
-import org.apache.pekko.actor.typed.{ActorRef, ActorSystem, Behavior}
+import org.apache.pekko.actor.typed.{ActorRef, ActorSystem, Behavior, Terminated}
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import org.apache.pekko.cluster.sharding.typed.ShardingEnvelope
 import org.apache.pekko.cluster.sharding.typed.scaladsl.{
@@ -160,13 +160,21 @@ object GenericClusterAggregateRegistry {
           aggregateBehavior(aggregateId),
           s"$aggregateName-${entityContext.entityId}"
         )
+        // 子が止まったらエンティティも止める。止まった子への転送を続けないため
+        context.watch(childRef)
+
+        def stopWithChild(forward: Behaviors.Receive[CMD]): Behavior[CMD] =
+          forward.receiveSignal { case (_, Terminated(`childRef`)) =>
+            context.log.info(s"$aggregateName aggregate ${entityContext.entityId} stopped")
+            Behaviors.stopped
+          }
 
         // アイドルタイムアウトとパッシベーションの設定
         if (idleTimeout > Duration.Zero && enablePassivation) {
           val timeoutMessage = createIdleMessage(aggregateId)
           context.setReceiveTimeout(idleTimeout, timeoutMessage)
 
-          Behaviors.receiveMessage[CMD] { msg =>
+          stopWithChild(Behaviors.receiveMessage[CMD] { msg =>
             if (msg == timeoutMessage) {
               // タイムアウト時はパッシベーションを開始
               context.log.debug(s"Aggregate ${entityContext.entityId} is idle, passivating...")
@@ -176,7 +184,7 @@ object GenericClusterAggregateRegistry {
               childRef ! msg
               Behaviors.same
             }
-          }
+          })
         } else {
           // タイムアウトまたはパッシベーションが無効な場合
           if (!enablePassivation) {
@@ -184,10 +192,10 @@ object GenericClusterAggregateRegistry {
           } else {
             context.log.debug(s"Idle timeout disabled for $aggregateName aggregate")
           }
-          Behaviors.receiveMessage[CMD] { msg =>
+          stopWithChild(Behaviors.receiveMessage[CMD] { msg =>
             childRef ! msg
             Behaviors.same
-          }
+          })
         }
       }
 
