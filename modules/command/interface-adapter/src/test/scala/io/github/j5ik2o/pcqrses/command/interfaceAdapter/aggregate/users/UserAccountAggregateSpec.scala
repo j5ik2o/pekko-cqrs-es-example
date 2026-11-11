@@ -2,7 +2,11 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users
 
 import com.typesafe.config.{Config, ConfigFactory}
 import io.github.j5ik2o.pcqrses.command.domain.users.UserAccountId
-import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.Command
+import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.{
+  Command,
+  Get,
+  GetReply
+}
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.test.ActorSpec
 import org.apache.pekko.actor.testkit.typed.scaladsl.TestProbe
 import org.scalatest.BeforeAndAfterAll
@@ -107,6 +111,25 @@ class UserAccountAggregateSpec
       "Getコマンドを受信したとき" - {
         "NotFoundを返す" in
           testGetUserAccountOnDeleted()
+      }
+    }
+
+    "集約の中でIllegalArgumentExceptionが起きたとき" - {
+      "再起動せずに停止する" in {
+        val delegate = UserAccountId.generate()
+        val defectiveId: UserAccountId = new UserAccountId {
+          override def entityTypeName: String = delegate.entityTypeName
+          override def asString: String = delegate.asString
+          override def equals(other: Any): Boolean =
+            throw new IllegalArgumentException("injected precondition violation")
+          override def hashCode(): Int = delegate.hashCode()
+        }
+        val aggregate = spawn(UserAccountAggregate(defectiveId))
+        val probe = createTestProbe[GetReply]()
+
+        aggregate ! Get(defectiveId, probe.ref)
+
+        probe.expectTerminated(aggregate)
       }
     }
   }
