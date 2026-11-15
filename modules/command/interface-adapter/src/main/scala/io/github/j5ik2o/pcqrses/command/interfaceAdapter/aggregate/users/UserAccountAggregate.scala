@@ -9,7 +9,7 @@ import com.github.j5ik2o.pekko.persistence.effector.scaladsl.{
 }
 import io.github.j5ik2o.pcqrses.command.domain.users.{UserAccount, UserAccountEvent, UserAccountId}
 import io.github.j5ik2o.pcqrses.command.interfaceAdapter.contract.users.UserAccountProtocol.*
-import org.apache.pekko.actor.typed.{Behavior, SupervisorStrategy}
+import org.apache.pekko.actor.typed.Behavior
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 
 object UserAccountAggregate {
@@ -81,22 +81,17 @@ object UserAccountAggregate {
       .withSnapshotCriteria(SnapshotCriteria.every(1000))
       .withRetentionCriteria(RetentionCriteria.snapshotEvery(2))
     Behaviors.setup[Command] { implicit ctx =>
-      Behaviors
-        .supervise(
-          PersistenceEffector
-            .fromConfig[UserAccountAggregateState, UserAccountEvent, Command](
-              config
-            ) {
-              case (initialState: UserAccountAggregateState.NotCreated, effector) =>
-                handleNotCreated(initialState, effector)
-              case (initialState: UserAccountAggregateState.Created, effector) =>
-                handleCreated(initialState, effector)
-              case (initialState: UserAccountAggregateState.Deleted, effector) =>
-                handleDeleted(initialState, effector)
-            })
-        .onFailure[IllegalArgumentException](
-          SupervisorStrategy.restart
-        )
+      PersistenceEffector
+        .fromConfig[UserAccountAggregateState, UserAccountEvent, Command](
+          config
+        ) {
+          case (initialState: UserAccountAggregateState.NotCreated, effector) =>
+            handleNotCreated(initialState, effector)
+          case (initialState: UserAccountAggregateState.Created, effector) =>
+            handleCreated(initialState, effector)
+          case (initialState: UserAccountAggregateState.Deleted, effector) =>
+            handleDeleted(initialState, effector)
+        }
     }
   }
 }
