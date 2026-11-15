@@ -1,0 +1,10 @@
+{
+  "name": "pekko-cqrs-es-example",
+  "scripts": {
+    "check:aislop": "node scripts/aislop-check-bootstrap.mjs check",
+    "test:aislop": "node scripts/aislop-check-bootstrap.mjs test"
+  },
+  "devDependencies": {
+    "aislop": "0.20.1"
+  }
+}

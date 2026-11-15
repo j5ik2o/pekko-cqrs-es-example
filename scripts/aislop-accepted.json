@@ -1,0 +1,7 @@
+{
+  "engines": ["format", "lint", "code-quality", "ai-slop", "security"],
+  "missingToolsAllowed": {
+    "ruff": "ruff は Python の format/lint に使うが、このリポジトリは Scala が主体で、Python は scripts/ 配下の補助スクリプトのみ。aislop とは別に ruff を導入していないため、未導入を許可する。"
+  },
+  "accepted": []
+}
