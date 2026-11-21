@@ -7,15 +7,17 @@ permissions:
 
 jobs:
   aislop:
-    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - run: exit 0
 
   build:
     runs-on: ubuntu-latest
+    concurrency:
+      group: ci-required-job-cancel-fixture-3ae7d63
+      cancel-in-progress: true
     steps:
-      - run: exit 0
+      - run: sleep 180
 
   required:
     name: CI required
