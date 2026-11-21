@@ -134,3 +134,20 @@ jobs:
       - name: Stop E2E services
         if: always()
         run: docker compose -f docker-compose-common.yml -f docker-compose-local.yml down
+
+  required:
+    name: CI required
+    needs: [aislop, build]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+
+    steps:
+      - name: Require all CI jobs to succeed
+        env:
+          AISLOP_RESULT: ${{ needs.aislop.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
+        run: |
+          printf 'aislop=%s build=%s\n' "$AISLOP_RESULT" "$BUILD_RESULT"
+          test "$AISLOP_RESULT" = success && test "$BUILD_RESULT" = success
