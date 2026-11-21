@@ -17,7 +17,7 @@ jobs:
       group: ci-required-job-cancel-fixture-3ae7d63
       cancel-in-progress: true
     steps:
-      - run: sleep 180
+      - run: exit 0
 
   required:
     name: CI required
