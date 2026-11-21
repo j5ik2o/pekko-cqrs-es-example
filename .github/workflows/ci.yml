@@ -14,7 +14,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - run: sleep 180
+      - name: Record the pull request event
+        run: |
+          jq -c --arg tested_sha "$GITHUB_SHA" '{action, old_base: .changes.base.ref.from, base: .pull_request.base.ref, base_sha: .pull_request.base.sha, head_sha: .pull_request.head.sha, tested_sha: $tested_sha}' "$GITHUB_EVENT_PATH"
 
   required:
     name: CI required
