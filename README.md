@@ -211,6 +211,7 @@ python3 scripts/test-ppd-smoke.py
 既存単体テストは inmem journal を使うため、PPD 互換性の確認にはこのスモークも必要です。
 DynamoDB Local の項目検証は RMU のストリーム消費を検証しません。
 CI では Local スモークに加えて、LocalStack / PostgreSQL の E2E も実行します。
+README のみを変更した PR でも、CI のビルドとテストは実行されます。
 手元で RMU を確認する場合は既存の LocalStack / PostgreSQL 環境を起動し、Lambda をデプロイしたうえで
 `./scripts/test-e2e.sh` により Command API から Query API への反映を確認します。
 
