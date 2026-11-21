@@ -32,11 +32,20 @@ jobs:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
+          test -n "$PR_BASE_SHA"
+          test -n "$PR_HEAD_SHA"
+          expected_parents="$PR_BASE_SHA $PR_HEAD_SHA"
+
           # The pull request merge ref can still point to the previous base.
-          git switch --detach "$PR_BASE_SHA"
-          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com \
-            merge --no-ff --no-edit "$PR_HEAD_SHA"
-          printf 'Testing base %s with head %s at %s\n' "$PR_BASE_SHA" "$PR_HEAD_SHA" "$(git rev-parse HEAD)"
+          if [ "$(git show -s --format=%P HEAD)" != "$expected_parents" ]; then
+            git switch --detach "$PR_BASE_SHA"
+            git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com \
+              merge --no-ff --no-edit "$PR_HEAD_SHA"
+          fi
+
+          actual_parents=$(git show -s --format=%P HEAD)
+          test "$actual_parents" = "$expected_parents"
+          printf 'Testing merge %s with parents %s\n' "$(git rev-parse HEAD)" "$actual_parents"
 
       - uses: actions/setup-node@v4
         with:
