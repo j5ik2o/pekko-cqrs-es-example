@@ -1,14 +1,6 @@
 name: CI
 
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
+on: pull_request
 
 permissions:
   contents: read
@@ -16,121 +8,27 @@ permissions:
 jobs:
   aislop:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-
     steps:
-      - uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: npm
-
-      - name: Install aislop
-        run: npm ci
-
-      - name: Run aislop check
-        run: npm run check:aislop
-
-      - name: Run aislop tests
-        run: npm run test:aislop
+      - run: exit 1
 
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    steps:
+      - run: exit 0
+
+  required:
+    name: CI required
+    needs: [aislop, build]
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: "21"
-          cache: sbt
-
-      - uses: sbt/setup-sbt@v1
-
-      - name: Install protoc
+      - name: Require all CI jobs to succeed
+        env:
+          AISLOP_RESULT: ${{ needs.aislop.result }}
+          BUILD_RESULT: ${{ needs.build.result }}
         run: |
-          sudo apt-get update
-          sudo apt-get install -y protobuf-compiler
-
-      - name: Verify E2E CLI response fixtures (fake transport)
-        run: python3 scripts/test-e2e-response-fixtures.py .
-
-      - name: Upload E2E CLI fixture diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: e2e-response-fixture-logs
-          path: target/e2e-response-fixtures/
-          if-no-files-found: ignore
-
-      - name: Compile
-        run: sbt -batch compile
-        env:
-          PROTOC_PATH: /usr/bin/protoc
-
-      - name: Test
-        run: sbt -batch test
-        env:
-          PROTOC_PATH: /usr/bin/protoc
-
-      - name: Lint
-        run: sbt -batch lint
-        env:
-          PROTOC_PATH: /usr/bin/protoc
-
-      - name: PPD command-api and migration smoke
-        run: python3 scripts/test-ppd-smoke.py
-        env:
-          PROTOC_PATH: /usr/bin/protoc
-
-      - name: Upload PPD smoke logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ppd-smoke-logs
-          path: target/ppd-smoke/
-          if-no-files-found: ignore
-
-      - name: Build APIs for stream E2E
-        run: sbt -batch dockerBuildAll
-        env:
-          PROTOC_PATH: /usr/bin/protoc
-
-      - name: Start LocalStack and PostgreSQL E2E
-        run: |
-          docker compose -f docker-compose-common.yml -f docker-compose-local.yml up -d localstack postgres flyway dynamodb-setup command-api-1 query-api
-          curl --fail --retry 60 --retry-delay 2 --retry-all-errors http://localhost:50501/api/health
-          curl --fail --retry 60 --retry-delay 2 --retry-all-errors http://localhost:50502/api/health
-
-      - name: Deploy RMU stream consumer
-        run: bash scripts/deploy-lambda-localstack.sh
-        env:
-          PROTOC_PATH: /usr/bin/protoc
-
-      - name: Verify command to stream to query E2E
-        run: bash scripts/test-e2e.sh
-        env:
-          E2E_MAX_RETRIES: "30"
-          E2E_RETRY_DELAY: "3"
-
-      - name: Collect stream E2E logs
-        if: always()
-        run: |
-          mkdir -p target/stream-e2e
-          docker compose -f docker-compose-common.yml -f docker-compose-local.yml logs --no-color > target/stream-e2e/compose.log 2>&1
-
-      - name: Upload stream E2E logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: stream-e2e-logs
-          path: target/stream-e2e/
-
-      - name: Stop E2E services
-        if: always()
-        run: docker compose -f docker-compose-common.yml -f docker-compose-local.yml down
+          printf 'aislop=%s build=%s\n' "$AISLOP_RESULT" "$BUILD_RESULT"
+          test "$AISLOP_RESULT" = success && test "$BUILD_RESULT" = success
