@@ -11,14 +11,40 @@ jobs:
   aislop:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: ${{ github.event.action == 'edited' && '0' || '1' }}
+      - &merge_edited_pr
+        name: Prepare merge with the edited PR base
+        if: github.event.action == 'edited'
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          # The pull request merge ref can still point to the previous base.
+          git switch --detach "$PR_BASE_SHA"
+          git -c user.name=github-actions -c user.email=github-actions@users.noreply.github.com \
+            merge --no-ff --no-edit "$PR_HEAD_SHA"
+          printf 'Testing base %s with head %s at %s\n' "$PR_BASE_SHA" "$PR_HEAD_SHA" "$(git rev-parse HEAD)"
+
       - run: exit 0
 
   build:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: ${{ github.event.action == 'edited' && '0' || '1' }}
+      - *merge_edited_pr
       - name: Record the pull request event
         run: |
-          jq -c --arg tested_sha "$GITHUB_SHA" '{action, old_base: .changes.base.ref.from, base: .pull_request.base.ref, base_sha: .pull_request.base.sha, head_sha: .pull_request.head.sha, tested_sha: $tested_sha}' "$GITHUB_EVENT_PATH"
+          jq -c --arg event_sha "$GITHUB_SHA" --arg tested_sha "$(git rev-parse HEAD)" '{action, old_base: .changes.base.ref.from, base: .pull_request.base.ref, base_sha: .pull_request.base.sha, head_sha: .pull_request.head.sha, event_sha: $event_sha, tested_sha: $tested_sha}' "$GITHUB_EVENT_PATH"
+          git show -s --format='parents=%P' HEAD
+          if [ "$(jq -r '.pull_request.base.ref' "$GITHUB_EVENT_PATH")" = main ]; then
+            test "$(git rev-parse HEAD^1)" = "$(jq -r '.pull_request.base.sha' "$GITHUB_EVENT_PATH")"
+            test "$(git rev-parse HEAD^2)" = "$(jq -r '.pull_request.head.sha' "$GITHUB_EVENT_PATH")"
+          fi
 
   required:
     name: CI required
