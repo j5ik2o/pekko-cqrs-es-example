@@ -23,6 +23,7 @@ object UserAccountReadModelUpdater {
     case object NothingToApply extends ApplyDecision
     case object SkipMigrationRecord extends ApplyDecision
     final case class MigrationRecordAhead(checkpoint: Long, head: Long) extends ApplyDecision
+    final case class EventsEndBeforeHead(lastEvent: Long, head: Long) extends ApplyDecision
   }
 
   /** checkpoint と JournalHead レコードから、適用するイベントを決める。 */
@@ -34,9 +35,16 @@ object UserAccountReadModelUpdater {
         ApplyDecision.SkipMigrationRecord
       }
     } else {
+      val lastEvent = record.events.map(_.sequenceNumber).max
       val pending = record.eventsAfter(checkpoint)
-      if (pending.isEmpty) ApplyDecision.NothingToApply
-      else ApplyDecision.Apply(pending)
+      if (lastEvent != record.sequenceNumber) {
+        // 適用しても checkpoint が head に届かない。通知が未適用の番号を更新済みと伝えないよう、失敗させる
+        ApplyDecision.EventsEndBeforeHead(lastEvent, record.sequenceNumber)
+      } else if (pending.isEmpty) {
+        ApplyDecision.NothingToApply
+      } else {
+        ApplyDecision.Apply(pending)
+      }
     }
 
   /** Renamed_V1 が0行更新の場合は、Created_V1 を取り逃した可能性があるため失敗させる。 */
@@ -69,11 +77,13 @@ final class UserAccountReadModelUpdater(
 
   private val persistentReprSerializer = serialization.serializerFor(classOf[PersistentRepr])
 
-  def apply(record: JournalHeadRecord): Either[Throwable, Unit] = {
+  /** 適用したかどうかの判断を返す。DB のトランザクションが確定してから返る。 */
+  def apply(record: JournalHeadRecord): Either[Throwable, ApplyDecision] = {
     val action = for {
       _ <- component.ReadModelCheckpointsDao.ensureExists(record.persistenceId)
       checkpoint <- component.ReadModelCheckpointsDao.lockByPersistenceId(record.persistenceId)
-      _ <- decide(record, checkpoint.sequenceNr) match {
+      decision = decide(record, checkpoint.sequenceNr)
+      _ <- decision match {
         case ApplyDecision.Apply(events) =>
           applyEvents(record, events)
 
@@ -86,6 +96,13 @@ final class UserAccountReadModelUpdater(
           )
           DBIO.successful(())
 
+        case ApplyDecision.EventsEndBeforeHead(lastEvent, headSequenceNr) =>
+          DBIO.failed(
+            new IllegalStateException(
+              s"JournalHead record for ${record.persistenceId} ends its events at $lastEvent, but its head is $headSequenceNr"
+            )
+          )
+
         case ApplyDecision.MigrationRecordAhead(checkpointSequenceNr, headSequenceNr) =>
           DBIO.failed(
             new IllegalStateException(
@@ -93,7 +110,7 @@ final class UserAccountReadModelUpdater(
             )
           )
       }
-    } yield ()
+    } yield decision
     Try(
       Await
         .result(databaseConfig.db.run(action.transactionally), databaseOperationTimeout)).toEither

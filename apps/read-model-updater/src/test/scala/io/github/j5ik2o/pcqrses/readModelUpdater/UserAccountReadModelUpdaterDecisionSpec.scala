@@ -22,6 +22,13 @@ class UserAccountReadModelUpdaterDecisionSpec extends AnyFreeSpec with Matchers 
       )
     }
 
+    "fails a record whose events end before its head" in {
+      val record = JournalHeadRecord("UserAccount-1", 3L, Vector(event(2L)))
+
+      UserAccountReadModelUpdater.decide(record, 1L) shouldBe
+        ApplyDecision.EventsEndBeforeHead(lastEvent = 2L, head = 3L)
+    }
+
     "does nothing when every event is at or below the checkpoint" in {
       val record = JournalHeadRecord("UserAccount-1", 2L, Vector(event(1L), event(2L)))
 

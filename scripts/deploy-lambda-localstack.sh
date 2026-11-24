@@ -19,7 +19,7 @@ export AWS_DEFAULT_REGION=ap-northeast-1
 export PORT=50503
 export HOST=localhost
 export ENDPOINT_URL=http://${HOST}:${PORT}
-export SCALA_VERSION=3.6.2
+export SCALA_VERSION=3.7.2
 export PROJECT_NAME=read-model-updater
 
 # Lambda関数名
@@ -122,9 +122,20 @@ else
     FUNCTION_EXISTS="false"
 fi
 
+# Read Model 更新後の通知先（SNS FIFO トピック）。既にあれば同じ ARN が返る
+NOTIFICATION_TOPIC_NAME="${NOTIFICATION_TOPIC_NAME:-pcqrses-read-model-updated.fifo}"
+echo "📣 通知用の SNS トピックを作成中: $NOTIFICATION_TOPIC_NAME"
+NOTIFICATION_TOPIC_ARN=$(aws sns create-topic \
+    --endpoint-url $ENDPOINT_URL \
+    --name "$NOTIFICATION_TOPIC_NAME" \
+    --attributes FifoTopic=true \
+    --query 'TopicArn' \
+    --output text)
+echo "✅ 通知トピック ARN: $NOTIFICATION_TOPIC_ARN"
+
 # 環境変数をファイルに書き出し
 ENV_JSON_FILE="/tmp/lambda-env.json"
-cat > $ENV_JSON_FILE << 'EOF'
+cat > $ENV_JSON_FILE << EOF
 {
   "Variables": {
     "DATABASE_URL": "jdbc:postgresql://postgres:5432/p-cqrs-es_development",
@@ -133,7 +144,9 @@ cat > $ENV_JSON_FILE << 'EOF'
     "AWS_DEFAULT_REGION": "ap-northeast-1",
     "DYNAMODB_ENDPOINT_URI": "http://localstack:4566",
     "KINESIS_ENDPOINT_URI": "http://localstack:4566",
-    "CLOUDWATCH_ENDPOINT_URI": "http://localstack:4566"
+    "CLOUDWATCH_ENDPOINT_URI": "http://localstack:4566",
+    "READ_MODEL_UPDATER_NOTIFICATION_TOPIC_ARN": "${NOTIFICATION_TOPIC_ARN}",
+    "READ_MODEL_UPDATER_NOTIFICATION_ENDPOINT": "http://localstack:4566"
   }
 }
 EOF
