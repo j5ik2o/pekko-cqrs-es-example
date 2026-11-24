@@ -94,7 +94,7 @@ object Dependencies {
       "io.github.j5ik2o" %% s"pekko-persistence-dynamodb-journal-v2" % Version.pekkoPersistenceDynamoDB
     val pekkoPersistenceDynamoDBSnapshot =
       "io.github.j5ik2o" %% s"pekko-persistence-dynamodb-snapshot-v2" % Version.pekkoPersistenceDynamoDB
-    val pekkoPersistenceEffector = "io.github.j5ik2o" %% "pekko-persistence-effector" % "0.8.11"
+    val pekkoPersistenceEffector = "io.github.j5ik2o" %% "pekko-persistence-effector" % "0.8.16"
   }
 
   object circe {
@@ -154,6 +154,9 @@ object Dependencies {
 
   object awsSdkV2 {
     val dynamodb = "software.amazon.awssdk" % "dynamodb" % "2.20.162"
+    val sns = "software.amazon.awssdk" % "sns" % "2.20.162"
+    // Lambda の jar から netty を除いているため、同期の HTTP クライアントを明示する
+    val urlConnectionClient = "software.amazon.awssdk" % "url-connection-client" % "2.20.162"
   }
 
   object jackson {

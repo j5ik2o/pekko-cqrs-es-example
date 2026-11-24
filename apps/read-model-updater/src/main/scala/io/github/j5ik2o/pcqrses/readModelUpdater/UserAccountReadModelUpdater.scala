@@ -69,11 +69,13 @@ final class UserAccountReadModelUpdater(
 
   private val persistentReprSerializer = serialization.serializerFor(classOf[PersistentRepr])
 
-  def apply(record: JournalHeadRecord): Either[Throwable, Unit] = {
+  /** 適用したかどうかの判断を返す。DB のトランザクションが確定してから返る。 */
+  def apply(record: JournalHeadRecord): Either[Throwable, ApplyDecision] = {
     val action = for {
       _ <- component.ReadModelCheckpointsDao.ensureExists(record.persistenceId)
       checkpoint <- component.ReadModelCheckpointsDao.lockByPersistenceId(record.persistenceId)
-      _ <- decide(record, checkpoint.sequenceNr) match {
+      decision = decide(record, checkpoint.sequenceNr)
+      _ <- decision match {
         case ApplyDecision.Apply(events) =>
           applyEvents(record, events)
 
@@ -93,7 +95,7 @@ final class UserAccountReadModelUpdater(
             )
           )
       }
-    } yield ()
+    } yield decision
     Try(
       Await
         .result(databaseConfig.db.run(action.transactionally), databaseOperationTimeout)).toEither

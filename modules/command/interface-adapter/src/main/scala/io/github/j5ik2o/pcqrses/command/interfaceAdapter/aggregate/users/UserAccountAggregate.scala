@@ -3,6 +3,7 @@ package io.github.j5ik2o.pcqrses.command.interfaceAdapter.aggregate.users
 import com.github.j5ik2o.pekko.persistence.effector.scaladsl.{
   PersistenceEffector,
   PersistenceEffectorConfig,
+  PersistenceId,
   PersistenceMode,
   RetentionCriteria,
   SnapshotCriteria
@@ -70,10 +71,20 @@ object UserAccountAggregate {
     Behaviors.same
   }
 
+  /**
+   * 保存する persistence id は `UserAccount-<ULID>`。
+   *
+   * Effector の既定の区切り文字は `|` だが、PPD のキー計算（`persistence-id-separator` の既定 `-`）と RMU の接頭辞
+   * `UserAccount-` に合わせて `-` を明示する。entity id が区切り文字を含むと、Effector は保存の前に IllegalArgumentException
+   * で拒否する。
+   */
+  def persistenceId(id: UserAccountId): PersistenceId =
+    PersistenceId.of(id.entityTypeName, id.asString, "-")
+
   def apply(id: UserAccountId): Behavior[Command] = {
     val config = PersistenceEffectorConfig
       .create[UserAccountAggregateState, UserAccountEvent, Command](
-        persistenceId = s"${id.entityTypeName}-${id.asString}",
+        persistenceId = persistenceId(id),
         initialState = UserAccountAggregateState.NotCreated(id),
         applyEvent = (state, event) => state.applyEvent(event)
       )

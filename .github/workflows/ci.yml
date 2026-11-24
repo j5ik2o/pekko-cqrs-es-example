@@ -146,6 +146,9 @@ jobs:
           E2E_MAX_RETRIES: "30"
           E2E_RETRY_DELAY: "3"
 
+      - name: Verify notification after the read model update
+        run: python3 scripts/test-rmu-notification.py
+
       - name: Collect stream E2E logs
         if: always()
         run: |

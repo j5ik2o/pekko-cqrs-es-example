@@ -36,6 +36,7 @@ graph TB
     DynamoDB -->|JournalHead Stream| Streams
     Streams -->|Trigger| Lambda
     Lambda -->|Update| PostgreSQL
+    Lambda -->|"Notify (after commit)"| SNS["SNS FIFO<br/>(Read Model 更新通知)"]
     QueryAPI -->|Query| SlickDAOs
     SlickDAOs -->|Read| PostgreSQL
 
@@ -53,7 +54,8 @@ graph TB
 3. **イベント永続化**: イベントを DynamoDB の `Journal` と `JournalHead` に同一トランザクションで保存
 4. **イベント配信**: `JournalHead` テーブルの DynamoDB Streams が、集約ごとの書き込み順にイベントを検知
 5. **Read Model更新**: Lambda関数がイベントを処理し、適用済みシーケンス番号と同一トランザクションでPostgreSQLを更新
-6. **クエリ実行**: GraphQL Queryでデータを取得（例: `getUserAccounts`）
+6. **更新通知**: トランザクションが確定したあとに、Lambda が SNS トピックへ更新を通知
+7. **クエリ実行**: GraphQL Queryでデータを取得（例: `getUserAccounts`）
 
 `Journal` テーブルは集約の復元・リプレイ用です。Read Model の順序保証には、1集約1アイテムとなる `JournalHead` テーブルのストリームを使います。異なる集約間の順序は保証対象外です。
 
@@ -75,6 +77,20 @@ graph TB
 4. 最後に適用したシーケンス番号で checkpoint を更新する
 
 イベント適用と checkpoint 更新が同一トランザクションなので、Lambda が同じバッチを再試行しても二重適用されません。`events` が空のレコードはマイグレーション用のレコードとして扱い、checkpoint を進めずにスキップします。
+
+### Read Model 更新後の通知
+
+Read Model の更新を確定したあとに、Lambda は SNS トピックへ次の JSON を送ります。通知を受けたクライアントがリードAPIを叩いたとき、Read Model はすでに更新されています。通知を RMU と並行に置くと、この順序が崩れます。
+
+```json
+{"type":"ReadModelUpdated","persistenceId":"UserAccount-<ULID>","sequenceNr":1}
+```
+
+- 通知先は `READ_MODEL_UPDATER_NOTIFICATION_TOPIC_ARN` で指定します。空なら通知しません。LocalStack では `READ_MODEL_UPDATER_NOTIFICATION_ENDPOINT` も指定します。`scripts/deploy-lambda-localstack.sh` は FIFO トピック `pcqrses-read-model-updated.fifo` を作って両方を設定します。
+- FIFO トピックでは persistence id をメッセージグループにし、集約ごとの順序を保ちます。重複排除 ID は `persistenceId:sequenceNr` です。
+- 通知は少なくとも1回届きます。送信に失敗したレコードは失敗として Lambda に返し、再試行します。再試行では checkpoint が進んでいるので Read Model は変わらず、通知だけを送り直します。受け手は `(persistenceId, sequenceNr)` で重複を除いてください。
+- 処理できないデータや送信の失敗で、レコードを読み飛ばしたり退避したりはしません。進まない状態は Lambda のエラー件数のメトリクスとアラートで検知します。
+- `scripts/test-rmu-notification.py` は、SQS FIFO キューをトピックに購読させてユーザーを作成し、通知を受けた直後に Query API から読めることを確認します。
 
 DynamoDB Streams の保持期間は24時間です。それを超えて停止した場合は `Journal` から Read Model を再構築し、checkpoint を最後にリプレイしたシーケンス番号に合わせてください。
 
@@ -192,9 +208,9 @@ docker compose -f docker-compose-common.yml -f docker-compose-local.yml down -v
 ./scripts/run-single.sh up
 ```
 
-### PPD 1.2.0 の検証
+### PPD 1.2.0 と Effector 0.8.16 の検証
 
-標準ビルドは Maven Central の公開版 1.2.0 を使用します。
+標準ビルドは Maven Central の公開版 PPD 1.2.0 と `pekko-persistence-effector` 0.8.16 を使用します。Effector 0.8.16 は Scala 3.7.2 でビルドされているため、このリポジトリも Scala 3.7.2 を使います。
 Java 21、sbt、protoc、Docker、AWS CLI、Python 3 が必要です。
 
 ```bash
@@ -208,6 +224,17 @@ python3 scripts/test-ppd-smoke.py
 書き込まないこと、execute が Head を復元すること、再実行で変化しないことを確認します。
 実行ログは `target/ppd-smoke/` に保存します。専用コンテナだけを終了時に削除します。
 
+続けて同じ DynamoDB Local に専用テーブルを作り、`PersistenceFailureDynamoDBSpec` を流します。
+実 `UserAccountAggregate` に、ドメインの検証を通らない 420,000 文字の名前を試験側から入れ、
+JournalHead 項目の上限超えを起こします。次を確認します。
+
+- 上限超えで Effector が `PersistEventFailedException`（原因 `JournalHeadItemTooLargeException`）を投げ、集約が停止する。待機中に届いたコマンドには応答しない
+- 失敗の前後で Journal と JournalHead の項目が変わらない
+- 作り直した集約は失敗した番号から保存を続ける（番号は `1` または `1, 2`。欠番なし）
+- 保存する persistence id は `UserAccount-<ULID>`、PPD の `pkey` は `UserAccount-<shard>`、`skey` は `<ULID>-<sequence-nr>`
+
+この spec は `PPD_EFFECTOR_IT=true` のときだけ動き、通常の `sbt test` ではキャンセルされます。
+
 既存単体テストは inmem journal を使うため、PPD 互換性の確認にはこのスモークも必要です。
 DynamoDB Local の項目検証は RMU のストリーム消費を検証しません。
 CI では Local スモークに加えて、LocalStack / PostgreSQL の E2E も実行します。
@@ -217,15 +244,26 @@ CI では Local スモークに加えて、LocalStack / PostgreSQL の E2E も�
 1.2.0 では Journal 行 400 KB、Head 項目 400 KB、1 回 99 イベント、
 トランザクション 4 MB の上限超えは `asyncWriteMessages` 全体の失敗になります。
 `onPersistFailure` の後にアクターが停止し、欠番は残りません。
+Effector 0.8.16 では、保存を担う子アクターの停止に合わせて集約（親）も例外で停止します。
+0.8.15 以前では親が応答を待ち続けます。
 `onPersistRejected` による継続を前提にしないでください。
+
+Effector 0.8.16 の persistence id は型付きの `PersistenceId` で、既定の区切り文字は `|` です。
+このサンプルは `PersistenceId.of("UserAccount", ulid, "-")` で区切り文字 `-` を明示し、
+保存する id を従来どおり `UserAccount-<ULID>` に保ちます。`|` のままだと id が `UserAccount|<ULID>` に変わり、
+既存のジャーナルと RMU の接頭辞 `UserAccount-` に合いません。entity id が区切り文字を含むと、
+Effector は保存の前に `IllegalArgumentException` で拒否します。
+PPD は id を `-` で分け、1番目の要素とシャード番号から `pkey` を、2番目の要素とシーケンス番号から `skey` を作ります。
+`-` を2つ以上含む id では3番目以降が捨てられ、別の集約と `pkey`/`skey` が重なることがあります。
+重なると、後から書く側は `DuplicateJournalEventsException` で保存できません。ULID の id では起きません。
 `JournalHead.events` は配列で、`persistAll` 1 回分も Head の 400 KB 以内に収めます。
 このサンプルは 1 コマンド 1 イベントを保存し、上限超えの継続処理は実装していません。
-スモークは通常の書き込みと移行を対象とし、上限超えの障害注入は対象外です。
+件数（99件）とトランザクション 4 MB の上限は、1コマンド1イベントのこの集約からは起こせないため対象外です。
 
 ## 技術スタック
 
 ### コア技術
-- **言語**: Scala 3.6.2
+- **言語**: Scala 3.7.2
 - **ビルドツール**: SBT 1.11.6
 - **アクターフレームワーク**: Apache Pekko 1.1.3 (型付きアクター、永続化、クラスター)
 

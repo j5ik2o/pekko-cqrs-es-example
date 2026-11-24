@@ -25,10 +25,24 @@ object JournalHeadColumns {
   }
 }
 
+/** Read Model 更新後の通知先。topic-arn が空なら通知しない。 */
+final case class NotificationConfig(topicArn: Option[String], endpoint: Option[String])
+
+object NotificationConfig {
+
+  def fromConfig(config: Config): NotificationConfig = {
+    val notification = config.getConfig("read-model-updater.notification")
+    def optional(path: String): Option[String] =
+      Some(notification.getString(path).trim).filter(_.nonEmpty)
+    NotificationConfig(topicArn = optional("topic-arn"), endpoint = optional("endpoint"))
+  }
+}
+
 final case class ReadModelUpdaterConfig(
   headTableName: String,
   persistenceIdPrefix: String,
-  columns: JournalHeadColumns
+  columns: JournalHeadColumns,
+  notification: NotificationConfig
 )
 
 object ReadModelUpdaterConfig {
@@ -38,7 +52,8 @@ object ReadModelUpdaterConfig {
     ReadModelUpdaterConfig(
       headTableName = stream.getString("head-table-name"),
       persistenceIdPrefix = stream.getString("persistence-id-prefix"),
-      columns = JournalHeadColumns.fromConfig(config)
+      columns = JournalHeadColumns.fromConfig(config),
+      notification = NotificationConfig.fromConfig(config)
     )
   }
 }

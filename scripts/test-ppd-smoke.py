@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Exercise the published PPD through command-api and offline migration."""
+"""Exercise the published PPD and Effector through command-api, offline migration and write failures."""
 import json
 import os
 from pathlib import Path
@@ -57,6 +57,25 @@ def create_user(port):
         result = json.load(response)
     assert not result.get('errors'), result
     return result['data']['createUserAccount']['id']
+
+
+def effector_failure_spec():
+    """Run PersistenceFailureDynamoDBSpec on its own tables in the same DynamoDB Local."""
+    names = {'journal-table': 'ItJournal', 'journal-head-table': 'ItJournalHead', 'snapshot-table': 'ItSnapshot'}
+    for table, name in names.items():
+        definition = json.loads((ROOT / 'tools/dynamodb-setup' / (table + '.json')).read_text())
+        definition['TableName'] = name
+        aws('create-table', '--cli-input-json', json.dumps(definition))
+    env = dict(ENV, PPD_EFFECTOR_IT='true',
+               J5IK2O_DYNAMO_DB_JOURNAL_TABLE_NAME=names['journal-table'],
+               J5IK2O_DYNAMO_DB_JOURNAL_HEAD_TABLE_NAME=names['journal-head-table'],
+               J5IK2O_DYNAMO_DB_SNAPSHOT_TABLE_NAME=names['snapshot-table'])
+    spec = 'io.github.j5ik2o.pcqrses.commandApi.PersistenceFailureDynamoDBSpec'
+    with (LOGS / 'effector-failure-spec.log').open('w') as log:
+        subprocess.run(['sbt', '-batch', 'commandApi/testOnly ' + spec], cwd=ROOT, env=env, check=True,
+                       timeout=900, stdout=log, stderr=subprocess.STDOUT)
+    log_text = (LOGS / 'effector-failure-spec.log').read_text()
+    assert 'Tests: succeeded 5, failed 0, canceled 0' in log_text, 'see target/ppd-smoke/effector-failure-spec.log'
 
 
 def stop(process):
@@ -128,6 +147,8 @@ def main():
         assert heads() == migrated, 'migration was not idempotent'
         assert aws('scan', '--table-name', 'Journal', '--consistent-read')['Items'] == rows
         print('PASS: command-api persisted Journal/Head; migration dry-run, execute and repeat verified.')
+        effector_failure_spec()
+        print('PASS: over-limit writes stopped the aggregate without gaps; persistence id separator contract verified.')
         print('RMU stream consumption requires the separate LocalStack/PostgreSQL E2E.')
     finally:
         if process is not None:

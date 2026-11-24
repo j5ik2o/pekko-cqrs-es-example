@@ -5,7 +5,7 @@ import scala.sys.process.Process
 
 val dbType = "postgresql"
 val basename = "pcqrses"
-val scala3Version = "3.6.2"
+val scala3Version = "3.7.2"
 val dbName = s"${basename}_db"
 val dbUserName = "postgres"
 val dbPassword = "postgres"
@@ -215,7 +215,8 @@ lazy val commandApi = (project in file("apps/command-api"))
       apachePekko.discovery,
       apachePekko.pekkoManagement,
       apachePekko.pekkoManagementClusterBootstrap,
-      apachePekko.pekkoManagementClusterHttp
+      apachePekko.pekkoManagementClusterHttp,
+      apachePekko.actorTestKitTyped % Test
     )
   )
   .dependsOn(commandInterfaceAdapter, infrastructure)
@@ -437,6 +438,8 @@ lazy val readModelUpdater = (project in file("apps/read-model-updater"))
       awsLambda.core,
       awsLambda.events,
       awsSdkV2.dynamodb,
+      awsSdkV2.sns,
+      awsSdkV2.urlConnectionClient,
       jackson.databind,
       jackson.moduleScala,
       logback.classic,

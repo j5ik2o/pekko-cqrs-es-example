@@ -21,7 +21,7 @@ services:
     ports:
       - "${DOCKER_LOCALSTACK_PORT:-50503}:4566"
     environment:
-      - SERVICES=lambda,dynamodb
+      - SERVICES=lambda,dynamodb,sns,sqs
       - DEBUG=1
       - LAMBDA_EXECUTOR=docker
       - DOCKER_HOST=unix:///var/run/docker.sock

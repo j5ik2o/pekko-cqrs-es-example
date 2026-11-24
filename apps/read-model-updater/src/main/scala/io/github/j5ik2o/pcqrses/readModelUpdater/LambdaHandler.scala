@@ -31,6 +31,16 @@ class LambdaHandler extends RequestHandler[DynamodbEvent, java.util.Map[String, 
   private lazy val serialization = SerializationExtension(system)
   private lazy val updater =
     new UserAccountReadModelUpdater(databaseConfig, serialization, databaseOperationTimeout)
+  private lazy val pipeline = {
+    updaterConfig.notification.topicArn match {
+      case Some(topicArn) => logger.info(s"Notifying read model updates to $topicArn")
+      case None => logger.info("Read model update notification is disabled")
+    }
+    new ReadModelUpdatePipeline(
+      updater.apply,
+      ReadModelUpdateNotifier.fromConfig(updaterConfig.notification)
+    )
+  }
 
   override def handleRequest(
     input: DynamodbEvent,
@@ -91,10 +101,15 @@ class LambdaHandler extends RequestHandler[DynamodbEvent, java.util.Map[String, 
                 Right(())
 
               case Right(head) =>
-                updater.apply(head).left.map { error =>
-                  ProcessingError(
-                    s"cannot apply the JournalHead record: ${error.getMessage}",
-                    Some(error))
+                pipeline.process(head).left.map {
+                  case ReadModelUpdatePipeline.Failure.Apply(error) =>
+                    ProcessingError(
+                      s"cannot apply the JournalHead record: ${error.getMessage}",
+                      Some(error))
+                  case ReadModelUpdatePipeline.Failure.Notify(error) =>
+                    ProcessingError(
+                      s"cannot notify the read model update: ${error.getMessage}",
+                      Some(error))
                 }
             }
         }
