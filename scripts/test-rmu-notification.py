@@ -67,12 +67,12 @@ def wait_for_notification(queue_url, persistence_id):
                        '--max-number-of-messages', '10', '--wait-time-seconds', '5',
                        '--attribute-names', 'All').get('Messages', [])
         for message in messages:
-            aws('sqs', 'delete-message', '--queue-url', queue_url,
-                '--receipt-handle', message['ReceiptHandle'])
             body = json.loads(message['Body'])
             seen.append(body)
             if body.get('persistenceId') == persistence_id:
-                return body, message['Attributes']
+                return body, message
+            aws('sqs', 'delete-message', '--queue-url', queue_url,
+                '--receipt-handle', message['ReceiptHandle'])
     raise RuntimeError(f'no notification for {persistence_id} within {WAIT_SECONDS}s; saw {seen}')
 
 
@@ -82,11 +82,13 @@ def main():
     user_id, first_name = create_user()
     persistence_id = 'UserAccount-' + user_id
     print(f'Created {persistence_id}')
-    body, attributes = wait_for_notification(queue_url, persistence_id)
-    # 通知を受け取った直後にリードAPIを叩く。RMU が更新を確定してから通知していれば、ここで見つかる
+    body, message = wait_for_notification(queue_url, persistence_id)
+    # 通知を受け取ったら、ほかの呼び出しを挟まずにリードAPIを叩く。RMU が更新を確定してから通知していれば、ここで見つかる
     found = graphql(QUERY_API,
                     'query($id: String!) { getUserAccount(userAccountId: $id) { id firstName } }',
                     {'id': user_id})['getUserAccount']
+    aws('sqs', 'delete-message', '--queue-url', queue_url, '--receipt-handle', message['ReceiptHandle'])
+    attributes = message['Attributes']
     print('Notification:', json.dumps(body), 'MessageGroupId:', attributes.get('MessageGroupId'))
     print('Query API right after the notification:', json.dumps(found, ensure_ascii=False))
     assert body == {'type': 'ReadModelUpdated', 'persistenceId': persistence_id, 'sequenceNr': 1}, body

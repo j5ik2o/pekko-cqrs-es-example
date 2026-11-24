@@ -89,7 +89,9 @@ Read Model の更新を確定したあとに、Lambda は SNS トピックへ次
 - 通知先は `READ_MODEL_UPDATER_NOTIFICATION_TOPIC_ARN` で指定します。空なら通知しません。LocalStack では `READ_MODEL_UPDATER_NOTIFICATION_ENDPOINT` も指定します。`scripts/deploy-lambda-localstack.sh` は FIFO トピック `pcqrses-read-model-updated.fifo` を作って両方を設定します。
 - FIFO トピックでは persistence id をメッセージグループにし、集約ごとの順序を保ちます。重複排除 ID は `persistenceId:sequenceNr` です。
 - 通知は少なくとも1回届きます。送信に失敗したレコードは失敗として Lambda に返し、再試行します。再試行では checkpoint が進んでいるので Read Model は変わらず、通知だけを送り直します。受け手は `(persistenceId, sequenceNr)` で重複を除いてください。
-- 処理できないデータや送信の失敗で、レコードを読み飛ばしたり退避したりはしません。進まない状態は Lambda のエラー件数のメトリクスとアラートで検知します。
+- 通知はトピックの ARN のリージョンへ送ります。Lambda と別のリージョンのトピックも指定できます。ARN の形が正しくなければ、Lambda は起動時に失敗します。
+- 処理できないデータや送信の失敗で、レコードを読み飛ばしたり退避したりはしません。`events` の最後の番号が `sequence-nr` と合わないレコードも失敗にします。
+- 失敗したレコードは `batchItemFailures` で返すため、Lambda の `Errors` メトリクスには出ません。進まない状態は、イベントソースマッピング（`ReportBatchItemFailures` を有効にしたもの）の `FailedInvokeEventCount` で検知します。この指標は既定では出ないので、`aws lambda update-event-source-mapping --uuid <UUID> --metrics-config Metrics=EventCount` で有効にし、`FailedInvokeEventCount` と `IteratorAge` にアラームを付けてください。このリポジトリにアラームの定義はありません。
 - `scripts/test-rmu-notification.py` は、SQS FIFO キューをトピックに購読させてユーザーを作成し、通知を受けた直後に Query API から読めることを確認します。
 
 DynamoDB Streams の保持期間は24時間です。それを超えて停止した場合は `Journal` から Read Model を再構築し、checkpoint を最後にリプレイしたシーケンス番号に合わせてください。

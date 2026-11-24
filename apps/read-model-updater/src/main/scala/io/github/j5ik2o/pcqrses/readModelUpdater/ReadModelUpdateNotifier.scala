@@ -2,6 +2,7 @@ package io.github.j5ik2o.pcqrses.readModelUpdater
 
 import com.fasterxml.jackson.databind.ObjectMapper
 import software.amazon.awssdk.http.urlconnection.UrlConnectionHttpClient
+import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.sns.SnsClient
 import software.amazon.awssdk.services.sns.model.PublishRequest
 
@@ -40,12 +41,16 @@ object ReadModelUpdateNotifier {
   }
 
   def fromConfig(config: NotificationConfig): ReadModelUpdateNotifier =
-    config.topicArn match {
+    config.topic match {
       case None => Disabled
-      case Some(topicArn) =>
-        val builder = SnsClient.builder().httpClient(UrlConnectionHttpClient.create())
+      case Some(topic) =>
+        // Lambda のリージョンではなく、トピックのリージョンへ送る
+        val builder = SnsClient
+          .builder()
+          .httpClient(UrlConnectionHttpClient.create())
+          .region(Region.of(topic.region))
         config.endpoint.foreach(endpoint => builder.endpointOverride(URI.create(endpoint)))
-        new SnsReadModelUpdateNotifier(builder.build(), topicArn)
+        new SnsReadModelUpdateNotifier(builder.build(), topic.arn)
     }
 }
 

@@ -82,3 +82,19 @@ class ReadModelUpdatePipelineSpec extends AnyFreeSpec with Matchers {
     }
   }
 }
+
+class SnsTopicSpec extends AnyFreeSpec with Matchers {
+
+  "parse" - {
+    "takes the region from the topic ARN, not from the Lambda" in {
+      SnsTopic.parse("arn:aws:sns:ap-northeast-3:123456789012:updates.fifo") shouldBe
+        Right(SnsTopic("arn:aws:sns:ap-northeast-3:123456789012:updates.fifo", "ap-northeast-3"))
+    }
+
+    "rejects a value that is not an SNS topic ARN" in {
+      SnsTopic.parse("arn:aws:sqs:ap-northeast-1:123456789012:updates").isLeft shouldBe true
+      SnsTopic.parse("updates.fifo").isLeft shouldBe true
+      SnsTopic.parse("arn:aws:sns::123456789012:updates").isLeft shouldBe true
+    }
+  }
+}

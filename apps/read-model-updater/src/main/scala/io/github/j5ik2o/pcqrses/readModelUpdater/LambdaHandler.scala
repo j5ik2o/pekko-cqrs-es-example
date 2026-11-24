@@ -32,8 +32,8 @@ class LambdaHandler extends RequestHandler[DynamodbEvent, java.util.Map[String, 
   private lazy val updater =
     new UserAccountReadModelUpdater(databaseConfig, serialization, databaseOperationTimeout)
   private lazy val pipeline = {
-    updaterConfig.notification.topicArn match {
-      case Some(topicArn) => logger.info(s"Notifying read model updates to $topicArn")
+    updaterConfig.notification.topic match {
+      case Some(topic) => logger.info(s"Notifying read model updates to ${topic.arn}")
       case None => logger.info("Read model update notification is disabled")
     }
     new ReadModelUpdatePipeline(

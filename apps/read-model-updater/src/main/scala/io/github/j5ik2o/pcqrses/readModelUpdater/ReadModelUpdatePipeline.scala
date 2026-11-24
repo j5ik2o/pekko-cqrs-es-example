@@ -32,7 +32,7 @@ object ReadModelUpdatePipeline {
   }
 
   /**
-   * 更新後の Read Model がこのレコードを反映しているときに通知を返す。
+   * 更新後の Read Model がこのレコードを反映しているときに通知を返す。番号は head の番号で、decide がイベントの最後の番号と一致することを確かめている。
    *
    * すでに適用済み（NothingToApply）でも通知する。通知の送信に失敗して再試行されたレコードは、checkpoint が進んでいるので NothingToApply
    * になる。ここで通知しないと、その通知は失われる。移行のレコードは Read Model を変えないので通知しない。
@@ -43,7 +43,8 @@ object ReadModelUpdatePipeline {
     decision match {
       case ApplyDecision.Apply(_) | ApplyDecision.NothingToApply =>
         Some(ReadModelUpdated(record.persistenceId, record.sequenceNumber))
-      case ApplyDecision.SkipMigrationRecord | ApplyDecision.MigrationRecordAhead(_, _) =>
+      case ApplyDecision.SkipMigrationRecord | ApplyDecision.MigrationRecordAhead(_, _) |
+          ApplyDecision.EventsEndBeforeHead(_, _) =>
         None
     }
 }
